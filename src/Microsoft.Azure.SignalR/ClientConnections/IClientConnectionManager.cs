@@ -5,7 +5,7 @@ using System.Collections.Generic;
 
 namespace Microsoft.Azure.SignalR
 {
-    internal interface IClientConnectionManager : IClientConnectionLifetimeManager
+    interface IClientConnectionManager : IClientConnectionLifetimeManager
     {
         void AddClientConnection(ClientConnectionContext clientConnection);
 

@@ -56,13 +56,13 @@ namespace Microsoft.Azure.SignalR
         /// Specifies if server will shutdown gracefully. 
         /// Default value is false.
         /// </summary>
-        internal bool EnableGracefulShutdown { get; set; } = false;
+        public bool EnableGracefulShutdown { get; set; } = false;
 
         /// <summary>
         /// Specifies the timeout of a graceful shutdown process (in seconds). 
         /// Default value is 30 seconds.
         /// </summary>
-        internal TimeSpan ServerShutdownTimeout { get; set; } = TimeSpan.FromSeconds(Constants.DefaultShutdownTimeoutInSeconds);
+        public TimeSpan ServerShutdownTimeout { get; set; } = TimeSpan.FromSeconds(Constants.DefaultShutdownTimeoutInSeconds);
 
         /// <summary>
         /// Gets or sets the proxy used when ServiceEndpoint will attempt to connect to Azure SignalR.

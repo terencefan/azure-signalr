@@ -23,7 +23,11 @@ namespace Microsoft.Azure.SignalR
 
         public Dictionary<ServiceEndpoint, IServiceConnectionContainer> Connections { get; }
 
-        public MultiEndpointServiceConnectionContainer(string hub, Func<HubServiceEndpoint, IServiceConnectionContainer> generator, IServiceEndpointManager endpointManager, IMessageRouter router, ILoggerFactory loggerFactory)
+        public MultiEndpointServiceConnectionContainer(string hub,
+                                                       Func<HubServiceEndpoint, IServiceConnectionContainer> generator,
+                                                       IServiceEndpointManager endpointManager,
+                                                       IMessageRouter router,
+                                                       ILoggerFactory loggerFactory)
         {
             if (generator == null)
             {
@@ -143,6 +147,10 @@ namespace Microsoft.Azure.SignalR
             if (_inner != null)
             {
                 return _inner.WriteAsync(serviceMessage);
+            }
+
+            if (serviceMessage is MultiConnectionDataMessage message && message.ConnectionList.Count == 1)
+            {
             }
 
             return WriteMultiEndpointMessageAsync(serviceMessage, connection => connection.WriteAsync(serviceMessage));

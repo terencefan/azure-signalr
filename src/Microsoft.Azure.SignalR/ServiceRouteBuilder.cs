@@ -69,7 +69,7 @@ namespace Microsoft.Azure.SignalR
 #endif
             if (lifetime != null)
             {
-                // lifetime.ApplicationStopping.Register(() => dispatcher.ShutdownAsync(TimeSpan.FromSeconds(30)).Wait());
+                lifetime.ApplicationStopping.Register(() => dispatcher.ShutdownAsync(TimeSpan.FromSeconds(10)).Wait());
             }
         }
     }

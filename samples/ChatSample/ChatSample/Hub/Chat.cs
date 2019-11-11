@@ -9,10 +9,14 @@ namespace ChatSample
 {
     public class Chat : Hub
     {
+        private static string lastConnectionId = null;
+
         public void BroadcastMessage(string name, string message)
         {
             Clients.All.SendAsync("broadcastMessage", name, message);
             Console.WriteLine("Broadcasting...");
+
+            Clients.Client(lastConnectionId).SendAsync("echo", name, "echo");
         }
 
         public void Echo(string name, string message)
@@ -23,12 +27,18 @@ namespace ChatSample
 
         public override async Task OnConnectedAsync()
         {
+            var headers = Context.GetHttpContext().Request.Headers;
+
+            lastConnectionId = Context.ConnectionId;
+
             Console.WriteLine($"{Context.ConnectionId} connected.");
             await base.OnConnectedAsync();
         }
 
         public override async Task OnDisconnectedAsync(Exception e)
         {
+            var headers = Context.GetHttpContext().Request.Headers;
+
             Console.WriteLine($"{Context.ConnectionId} disconnected.");
             await base.OnDisconnectedAsync(e);
         }

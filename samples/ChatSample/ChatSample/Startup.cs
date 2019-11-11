@@ -19,7 +19,10 @@ namespace ChatSample
         public void ConfigureServices(IServiceCollection services)
         {
             services.AddSignalR()
-                    .AddAzureSignalR();
+                    .AddAzureSignalR(options =>
+                    {
+                        options.ConnectionCount = 1;
+                    });
         }
 
         public void Configure(IApplicationBuilder app)
@@ -28,7 +31,7 @@ namespace ChatSample
             app.UseAzureSignalR(routes =>
             {
                 routes.MapHub<Chat>("/chat");
-                routes.MapHub<BenchHub>("/bench");
+                // routes.MapHub<EchoHub>("/signalrbench");
             });
         }
     }
