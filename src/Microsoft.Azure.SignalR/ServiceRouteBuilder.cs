@@ -41,7 +41,7 @@ namespace Microsoft.Azure.SignalR
 #endif
             if (lifetime != null)
             {
-                // lifetime.ApplicationStopping.Register(Shutdown);
+                lifetime.ApplicationStopping.Register(Shutdown);
             }
         }
 
