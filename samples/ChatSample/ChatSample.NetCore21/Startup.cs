@@ -19,7 +19,11 @@ namespace ChatSample
         public void ConfigureServices(IServiceCollection services)
         {
             services.AddSignalR()
-                    .AddAzureSignalR();
+                    .AddAzureSignalR(option =>
+                    {
+                        option.EnableGracefulShutdown = true;
+                        option.MigrationLevel = Microsoft.Azure.SignalR.ServerConnectionMigrationLevel.ShutdownOnly;
+                    });
         }
 
         public void Configure(IApplicationBuilder app)

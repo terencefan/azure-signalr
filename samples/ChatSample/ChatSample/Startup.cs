@@ -13,8 +13,12 @@ namespace ChatSample.CoreApp3
         {
             services.AddMvc();
             services.AddSignalR()
-                .AddAzureSignalR()
-                .AddMessagePackProtocol();
+                    .AddAzureSignalR(option =>
+                    {
+                        option.EnableGracefulShutdown = true;
+                        option.MigrationLevel = Microsoft.Azure.SignalR.ServerConnectionMigrationLevel.ShutdownOnly;
+                    })
+                    .AddMessagePackProtocol();
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
