@@ -1,4 +1,5 @@
 using System;
+using Azure.Identity;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.SignalR;
@@ -20,6 +21,11 @@ namespace ChatSample.CoreApp3
                 {
                     option.GracefulShutdown.Mode = GracefulShutdownMode.WaitForClientsClose;
                     option.GracefulShutdown.Timeout = TimeSpan.FromSeconds(30);
+
+                    option.Endpoints = new ServiceEndpoint[]
+                    {
+                        new ServiceEndpoint(new VisualStudioCredential(), "https://test-for-azure-policy.service.signalr.net")
+                    };
 
                     option.GracefulShutdown.Add<Chat>(async (c) =>
                     {

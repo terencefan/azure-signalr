@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System;
+using Azure.Core;
 
 namespace Microsoft.Azure.SignalR
 {
@@ -47,12 +48,29 @@ namespace Microsoft.Azure.SignalR
         /// </summary>
         public EndpointMetrics EndpointMetrics { get; internal set; } = new EndpointMetrics();
 
+        private ServiceEndpoint(EndpointType type, string name = "", string version = "1.0")
+        {
+            Name = name;
+            EndpointType = type;
+            Version = version;
+        }
+
         public ServiceEndpoint(string key, string connectionString) : this(connectionString)
         {
             (Name, EndpointType) = ParseKey(key);
         }
 
-        public ServiceEndpoint(string connectionString, EndpointType type = EndpointType.Primary, string name = "")
+        public ServiceEndpoint(TokenCredential credential,
+                               string endpoint,
+                               int? port = 443,
+                               EndpointType type = EndpointType.Primary,
+                               string version = "1.0",
+                               string name = "") : this(type, name, version)
+        {
+            AccessKey = new AadAccessKey(credential, endpoint, port);
+        }
+
+        public ServiceEndpoint(string connectionString, EndpointType type = EndpointType.Primary, string name = "") : this(type, name)
         {
             if (string.IsNullOrWhiteSpace(connectionString))
             {
@@ -60,10 +78,7 @@ namespace Microsoft.Azure.SignalR
             }
 
             (AccessKey, Version, ClientEndpoint) = ConnectionStringParser.Parse(connectionString);
-
-            EndpointType = type;
             ConnectionString = connectionString;
-            Name = name;
         }
 
         public ServiceEndpoint(ServiceEndpoint endpoint)

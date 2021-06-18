@@ -1,13 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.ComponentModel;
 using System.Net;
 using System.Net.Http;
 using System.Security.Claims;
 using System.Threading;
 using System.Threading.Tasks;
+using Azure.Core;
 using Microsoft.Azure.SignalR.Common;
-using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Primitives;
 using Newtonsoft.Json.Linq;
 
@@ -15,6 +14,8 @@ namespace Microsoft.Azure.SignalR
 {
     internal class AadAccessKey : AccessKey
     {
+        private const string DefaultScope = "https://signalr.azure.com/.default";
+
         internal const int AuthorizeIntervalInMinute = 55;
         internal const int AuthorizeMaxRetryTimes = 3;
         internal const int AuthorizeRetryIntervalInSec = 3;
@@ -31,22 +32,21 @@ namespace Microsoft.Azure.SignalR
 
         public bool Authorized => InitializedTask.IsCompleted && _isAuthorized;
 
-        public AuthOptions Options { get; }
+        public TokenCredential TokenCredential { get; }
 
         private Task<object> InitializedTask => _initializedTcs.Task;
 
-        public AadAccessKey(AuthOptions options, string endpoint, int? port) : base(endpoint, port)
+        public AadAccessKey(TokenCredential credential, string endpoint, int? port) : base(endpoint, port)
         {
-            Options = options;
+            TokenCredential = credential;
         }
 
-        public Task<string> GenerateAadToken()
+        public async Task<string> GenerateAadToken(CancellationToken c = default)
         {
-            if (Options is IAadTokenGenerator options)
-            {
-                return options.AcquireAccessToken();
-            }
-            throw new InvalidOperationException("This accesskey is not able to generate AccessToken, a TokenBasedAuthOptions is required.");
+            // TODO, static context
+            var context = new TokenRequestContext(new string[] { DefaultScope });
+            var token = await TokenCredential.GetTokenAsync(context, c);
+            return token.Token;
         }
 
         public override async Task<string> GenerateAccessToken(
