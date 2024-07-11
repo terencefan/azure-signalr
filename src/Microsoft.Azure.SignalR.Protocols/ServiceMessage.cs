@@ -165,6 +165,50 @@ namespace Microsoft.Azure.SignalR.Protocol
     }
 
     /// <summary>
+    /// The ASRS send it to the source server connection to initiate a client connection migration.
+    /// Indicates that incoming messages are blocked.
+    /// The app server should block outgoing messages and reply with a <see cref="MigrateConnectionAckMessage"/>.
+    /// </summary>
+    public class MigrateConnectionRequestMessage : ConnectionMessage
+    {
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="connectionId">The client connection ID</param>
+        public MigrateConnectionRequestMessage(string connectionId) : base(connectionId)
+        {
+        }
+    }
+
+    /// <summary>
+    /// The source server connection send it to the ASRS to confirm the client connection migration.
+    /// Indicates that outgoing messages are being blocked.
+    /// The ASRS should unblock incoming messages and reply with a <see cref="MigrateConnectionFinAckMessage"/>
+    /// </summary>
+    public class MigrateConnectionAckMessage : ConnectionMessage
+    {
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="connectionId">The client connection ID</param>
+        public MigrateConnectionAckMessage(string connectionId) : base(connectionId)
+        {
+        }
+    }
+
+    /// <summary>
+    /// The ASRS send it to the target server connection to complete the client connection migration.
+    /// Indicates that incoming messages are unblocked.
+    /// The target server connection should unblock outgoing messages.
+    /// </summary>
+    public class MigrateConnectionFinAckMessage : ConnectionMessage
+    {
+        public MigrateConnectionFinAckMessage(string connectionId) : base(connectionId)
+        {
+        }
+    }
+
+    /// <summary>
     /// An access key request message.
     /// </summary>
     public class AccessKeyRequestMessage : ExtensibleServiceMessage
