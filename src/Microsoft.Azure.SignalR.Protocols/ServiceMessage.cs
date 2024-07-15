@@ -7,6 +7,35 @@ using MessagePack;
 
 namespace Microsoft.Azure.SignalR.Protocol
 {
+    public enum OutgoingTaskControlState
+    {
+        /// <summary>
+        /// Send from ASRS to the app server.
+        /// Asking the client connection to pause sending messages towards ASRS.
+        /// </summary>
+        Pause,
+
+        /// <summary>
+        /// Reply from the app server to ASRS.
+        /// Ackknowledge that the message sending towards ASRS has been pasued.
+        /// </summary>
+        PauseAck,
+
+        /// <summary>
+        /// Send from ASRS to the app server.
+        /// Asking the client connection to resume sending messages towards ASRS.
+        /// </summary>
+        Resume,
+    }
+
+    /// <summary>
+    /// Interface of ack-able message
+    /// </summary>
+    public interface IAckableMessage
+    {
+        int AckId { get; set; }
+    }
+
     /// <summary>
     /// Base class of messages between Azure SignalR Service and SDK.
     /// </summary>
@@ -25,8 +54,11 @@ namespace Microsoft.Azure.SignalR.Protocol
     public abstract class ExtensibleServiceMessage : ServiceMessage
     {
         private const int TracingId = 1;
+
         private const int Ttl = 2;
+
         private const int Protocol = 3;
+
         private const int Filter = 4;
         private const int DataMessageType = 5;
         private const int IsPartial = 6;
@@ -157,54 +189,21 @@ namespace Microsoft.Azure.SignalR.Protocol
     }
 
     /// <summary>
-    /// Interface of ack-able message 
-    /// </summary>
-    public interface IAckableMessage
-    {
-        int AckId { get; set; }
-    }
-
-    /// <summary>
     /// The ASRS send it to the source server connection to initiate a client connection migration.
     /// Indicates that incoming messages are blocked.
-    /// The app server should block outgoing messages and reply with a <see cref="MigrateConnectionAckMessage"/>.
     /// </summary>
-    public class MigrateConnectionRequestMessage : ConnectionMessage
+    public class OutgoingTaskControlMessage : ConnectionMessage
     {
+        public OutgoingTaskControlState State { get; }
+
         /// <summary>
-        /// 
+        ///
         /// </summary>
         /// <param name="connectionId">The client connection ID</param>
-        public MigrateConnectionRequestMessage(string connectionId) : base(connectionId)
+        /// <param name="state">The state of control message</param>
+        public OutgoingTaskControlMessage(string connectionId, OutgoingTaskControlState state) : base(connectionId)
         {
-        }
-    }
-
-    /// <summary>
-    /// The source server connection send it to the ASRS to confirm the client connection migration.
-    /// Indicates that outgoing messages are being blocked.
-    /// The ASRS should unblock incoming messages and reply with a <see cref="MigrateConnectionFinAckMessage"/>
-    /// </summary>
-    public class MigrateConnectionAckMessage : ConnectionMessage
-    {
-        /// <summary>
-        /// 
-        /// </summary>
-        /// <param name="connectionId">The client connection ID</param>
-        public MigrateConnectionAckMessage(string connectionId) : base(connectionId)
-        {
-        }
-    }
-
-    /// <summary>
-    /// The ASRS send it to the target server connection to complete the client connection migration.
-    /// Indicates that incoming messages are unblocked.
-    /// The target server connection should unblock outgoing messages.
-    /// </summary>
-    public class MigrateConnectionFinAckMessage : ConnectionMessage
-    {
-        public MigrateConnectionFinAckMessage(string connectionId) : base(connectionId)
-        {
+            State = state;
         }
     }
 
@@ -220,7 +219,7 @@ namespace Microsoft.Azure.SignalR.Protocol
 
         /// <summary>
         /// Gets or sets the key Id.
-        /// <c>null</c> 
+        /// <c>null</c>
         /// </summary>
         public string Kid { get; set; }
 
