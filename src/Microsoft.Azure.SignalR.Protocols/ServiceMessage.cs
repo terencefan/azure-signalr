@@ -7,7 +7,7 @@ using MessagePack;
 
 namespace Microsoft.Azure.SignalR.Protocol
 {
-    public enum OutgoingTaskControlState
+    public enum FlowControlState
     {
         /// <summary>
         /// Send from ASRS to the app server.
@@ -192,19 +192,14 @@ namespace Microsoft.Azure.SignalR.Protocol
     /// The ASRS send it to the source server connection to initiate a client connection migration.
     /// Indicates that incoming messages are blocked.
     /// </summary>
-    public class OutgoingTaskControlMessage : ConnectionMessage
+    /// <remarks>
+    ///
+    /// </remarks>
+    /// <param name="connectionId">The client connection ID</param>
+    /// <param name="state">The state of control message</param>
+    public class FlowControlMessage(string connectionId, FlowControlState state) : ConnectionMessage(connectionId)
     {
-        public OutgoingTaskControlState State { get; }
-
-        /// <summary>
-        ///
-        /// </summary>
-        /// <param name="connectionId">The client connection ID</param>
-        /// <param name="state">The state of control message</param>
-        public OutgoingTaskControlMessage(string connectionId, OutgoingTaskControlState state) : base(connectionId)
-        {
-            State = state;
-        }
+        public FlowControlState State { get; } = state;
     }
 
     /// <summary>
