@@ -7,25 +7,43 @@ using MessagePack;
 
 namespace Microsoft.Azure.SignalR.Protocol
 {
-    public enum FlowControlState
+    public enum ConnectionFlowControlOperation
     {
         /// <summary>
         /// Send from ASRS to the app server.
         /// Asking the client connection to pause sending messages towards ASRS.
         /// </summary>
-        Pause,
+        Pause = 1,
 
         /// <summary>
         /// Reply from the app server to ASRS.
         /// Ackknowledge that the message sending towards ASRS has been pasued.
         /// </summary>
-        PauseAck,
+        PauseAck = 2,
 
         /// <summary>
         /// Send from ASRS to the app server.
         /// Asking the client connection to resume sending messages towards ASRS.
         /// </summary>
-        Resume,
+        Resume = 3,
+
+        /// <summary>
+        /// Send from ASRS to the app server.
+        /// Asking the app server to send messages through other server connections.
+        /// </summary>
+        Offline = 4,
+    }
+
+    public enum ConnectionType
+    {
+        /// <summary>
+        /// Client connection
+        /// </summary>
+        Client = 1,
+        /// <summary>
+        /// Server connection
+        /// </summary>
+        Server = 2,
     }
 
     /// <summary>
@@ -192,14 +210,14 @@ namespace Microsoft.Azure.SignalR.Protocol
     /// The ASRS send it to the source server connection to initiate a client connection migration.
     /// Indicates that incoming messages are blocked.
     /// </summary>
-    /// <remarks>
-    ///
-    /// </remarks>
     /// <param name="connectionId">The client connection ID</param>
-    /// <param name="state">The state of control message</param>
-    public class FlowControlMessage(string connectionId, FlowControlState state) : ConnectionMessage(connectionId)
+    /// <param name="op">The operation</param>
+    /// <param name="type">The connection type</param>
+    public class ConnectionFlowControlMessage(string connectionId, ConnectionFlowControlOperation op, ConnectionType type = ConnectionType.Client) : ConnectionMessage(connectionId)
     {
-        public FlowControlState State { get; } = state;
+        public ConnectionFlowControlOperation Operation { get; } = op;
+
+        public ConnectionType ConnectionType { get; } = type;
     }
 
     /// <summary>
