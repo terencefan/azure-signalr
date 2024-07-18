@@ -290,9 +290,10 @@ namespace Microsoft.Azure.SignalR.Tests
             return false;
         }
 
-        public ClientConnectionContext CreateConnection(OpenConnectionMessage message, Action<HttpContext> configureContext = null)
+        public ClientConnection CreateConnection(OpenConnectionMessage message, Action<HttpContext> configureContext = null)
         {
-            return new ClientConnectionContext(message, configureContext, _clientPipeOptions, _clientPipeOptions);
+            var context = new ClientConnectionContext(message, configureContext, _clientPipeOptions, _clientPipeOptions);
+            return new ClientConnection(context);
         }
 
         private void AddApplicationMessage(Type type, ServiceMessage message)

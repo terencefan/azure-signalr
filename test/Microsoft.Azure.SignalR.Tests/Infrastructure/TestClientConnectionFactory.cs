@@ -12,11 +12,11 @@ namespace Microsoft.Azure.SignalR.Tests
 
         public IHubProtocol HubProtocol { get; } = new JsonHubProtocol();
 
-        public ClientConnectionContext CreateConnection(OpenConnectionMessage message, Action<HttpContext> configureContext = null)
+        public ClientConnection CreateConnection(OpenConnectionMessage message, Action<HttpContext> configureContext)
         {
             var context = new ClientConnectionContext(message, configureContext);
             Connections.Add(context);
-            return context;
+            return new ClientConnection(context);
         }
     }
 }
