@@ -269,6 +269,19 @@ namespace Microsoft.Azure.SignalR.Tests
                 }
                 return Task.CompletedTask;
             }
+
+            public async Task<bool> SafeWriteAsync(ServiceMessage serviceMessage)
+            {
+                try
+                {
+                    await WriteAsync(serviceMessage);
+                    return true;
+                }
+                catch (Exception)
+                {
+                    return false;
+                }
+            }
         }
     }
 }

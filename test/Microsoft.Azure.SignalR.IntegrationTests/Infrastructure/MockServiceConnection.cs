@@ -14,50 +14,62 @@ namespace Microsoft.Azure.SignalR.IntegrationTests.Infrastructure
     /// </summary>
     internal class MockServiceConnection : IServiceConnection
     {
-        private static int s_num = 0;
+        private static int Num = 0;
 
-        private readonly IServiceConnection _serviceConnection;
-        private IMockService _mockService;
-        
-        internal MockServiceConnection(IMockService mockService, IServiceConnection serviceConnection)
-        {
-            _mockService = mockService;
-            _serviceConnection = serviceConnection;
-            ConnectionNumber = Interlocked.Increment(ref s_num);
-            _mockService.RegisterSDKConnection(this);
-        }
+        private readonly IMockService _mockService;
 
         public int ConnectionNumber { get; private set; }
 
-        public IServiceConnection InnerServiceConnection => _serviceConnection;
+        public IServiceConnection InnerServiceConnection { get; }
 
         public MockServiceConnectionContext MyConnectionContext { get; set; }
 
-        public ServiceConnectionStatus Status => _serviceConnection.Status;
+        public ServiceConnectionStatus Status => InnerServiceConnection.Status;
 
-        public Task ConnectionInitializedTask => _serviceConnection.ConnectionInitializedTask;
+        public Task ConnectionInitializedTask => InnerServiceConnection.ConnectionInitializedTask;
 
-        public Task ConnectionOfflineTask => _serviceConnection.ConnectionOfflineTask;
+        public Task ConnectionOfflineTask => InnerServiceConnection.ConnectionOfflineTask;
+
+        internal MockServiceConnection(IMockService mockService, IServiceConnection serviceConnection)
+        {
+            _mockService = mockService;
+            InnerServiceConnection = serviceConnection;
+            ConnectionNumber = Interlocked.Increment(ref Num);
+            _mockService.RegisterSDKConnection(this);
+        }
+
+        public event Action<StatusChange> ConnectionStatusChanged
+        {
+            add => InnerServiceConnection.ConnectionStatusChanged += value;
+            remove => InnerServiceConnection.ConnectionStatusChanged -= value;
+        }
 
         public Task StartAsync(string target = null)
         {
             var tag = $"svc_{ConnectionNumber}_";
             target = tag + target;
-            return _serviceConnection.StartAsync(target);
+            return InnerServiceConnection.StartAsync(target);
         }
 
-        public Task StopAsync() => _serviceConnection.StopAsync();
+        public Task StopAsync() => InnerServiceConnection.StopAsync();
 
         public Task WriteAsync(ServiceMessage serviceMessage)
         {
-            var t = _serviceConnection.WriteAsync(serviceMessage);
+            var t = InnerServiceConnection.WriteAsync(serviceMessage);
             return t;
         }
 
-        public event Action<StatusChange> ConnectionStatusChanged
+        public async Task<bool> SafeWriteAsync(ServiceMessage serviceMessage)
         {
-            add => _serviceConnection.ConnectionStatusChanged += value;
-            remove => _serviceConnection.ConnectionStatusChanged -= value;
+            try
+            {
+                await WriteAsync(serviceMessage);
+            }
+            catch (Exception)
+            {
+                return false;
+            }
+            return true;
         }
     }
 }
