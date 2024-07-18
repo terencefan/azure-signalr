@@ -65,7 +65,7 @@ internal class TestServiceConnectionProxy : ServiceConnection, IDisposable
         } 
     }
 
-    protected override async Task<bool> SafeWriteAsync(ServiceMessage serviceMessage)
+    public override async Task<bool> SafeWriteAsync(ServiceMessage serviceMessage)
     {
         var result = await base.SafeWriteAsync(serviceMessage);
 

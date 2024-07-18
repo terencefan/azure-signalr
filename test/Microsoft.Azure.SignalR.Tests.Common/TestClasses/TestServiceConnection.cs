@@ -105,7 +105,7 @@ internal class TestServiceConnection : ServiceConnectionBase
         return Task.CompletedTask;
     }
 
-    protected override Task<bool> SafeWriteAsync(ServiceMessage serviceMessage)
+    public override Task<bool> SafeWriteAsync(ServiceMessage serviceMessage)
     {
         if (_throws)
         {
@@ -116,8 +116,5 @@ internal class TestServiceConnection : ServiceConnectionBase
         return Task.FromResult(true);
     }
 
-    protected Task WriteAsyncBase(ServiceMessage serviceMessage)
-    {
-        return base.WriteAsync(serviceMessage);
-    }
+    protected Task WriteAsyncBase(ServiceMessage serviceMessage) => WriteAsync(serviceMessage);
 }

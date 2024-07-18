@@ -21,17 +21,17 @@ namespace Microsoft.Azure.SignalR.Tests;
 
 public class ServiceLifetimeManagerFacts
 {
-    private static readonly List<string> TestUsers = new List<string> {"user1", "user2"};
-
-    private static readonly List<string> TestGroups = new List<string> {"group1", "group2"};
-
     private const string MockProtocol = "blazorpack";
 
     private const string TestMethod = "TestMethod";
 
-    private static readonly object[] TestArgs = {"TestArgs"};
+    private static readonly List<string> TestUsers = new List<string> { "user1", "user2" };
 
-    private static readonly List<string> TestConnectionIds = new List<string> {"connection1", "connection2"};
+    private static readonly List<string> TestGroups = new List<string> { "group1", "group2" };
+
+    private static readonly object[] TestArgs = { "TestArgs" };
+
+    private static readonly List<string> TestConnectionIds = new List<string> { "connection1", "connection2" };
 
     private static readonly IHubProtocolResolver HubProtocolResolver =
         new DefaultHubProtocolResolver(new IHubProtocol[]
@@ -41,8 +41,9 @@ public class ServiceLifetimeManagerFacts
             },
             NullLogger<DefaultHubProtocolResolver>.Instance);
 
-    private static readonly IOptions<HubOptions> _globalHubOptions = Options.Create(new HubOptions() { SupportedProtocols = new List<string>() { "json", "messagepack" } });
-    private static readonly IOptions<HubOptions<TestHub>> _localHubOptions = Options.Create(new HubOptions<TestHub>() { SupportedProtocols = new List<string>() { "json", "messagepack" } });
+    private static readonly IOptions<HubOptions> GlobalHubOptions = Options.Create(new HubOptions() { SupportedProtocols = new List<string>() { "json", "messagepack" } });
+
+    private static readonly IOptions<HubOptions<TestHub>> LocalHubOptions = Options.Create(new HubOptions<TestHub>() { SupportedProtocols = new List<string>() { "json", "messagepack" } });
 
     private static readonly ILogger<ServiceLifetimeManager<TestHub>> Logger =
         NullLogger<ServiceLifetimeManager<TestHub>>.Instance;
@@ -67,7 +68,7 @@ public class ServiceLifetimeManagerFacts
         var blazorDetector = new DefaultBlazorDetector();
         var clientInvocationManager = new DefaultClientInvocationManager();
         var serviceLifetimeManager = new ServiceLifetimeManager<TestHub>(serviceConnectionManager,
-            new ClientConnectionManager(), HubProtocolResolver, Logger, Marker, _globalHubOptions, _localHubOptions, blazorDetector, new DefaultServerNameProvider(), clientInvocationManager);
+            new ClientConnectionManager(), HubProtocolResolver, Logger, Marker, GlobalHubOptions, LocalHubOptions, blazorDetector, new DefaultServerNameProvider(), clientInvocationManager);
 
         await InvokeMethod(serviceLifetimeManager, functionName);
 
@@ -93,8 +94,8 @@ public class ServiceLifetimeManagerFacts
             HubProtocolResolver,
             Logger,
             Marker,
-            _globalHubOptions,
-            _localHubOptions,
+            GlobalHubOptions,
+            LocalHubOptions,
             blazorDetector,
             new DefaultServerNameProvider(),
             clientInvocationManager
@@ -129,7 +130,7 @@ public class ServiceLifetimeManagerFacts
         var clientInvocationManager = new DefaultClientInvocationManager();
 
         var serviceLifetimeManager = new ServiceLifetimeManager<TestHub>(serviceConnectionManager,
-            proxy.ClientConnectionManager, HubProtocolResolver, Logger, Marker, _globalHubOptions, _localHubOptions, blazorDetector, new DefaultServerNameProvider(), clientInvocationManager);
+            proxy.ClientConnectionManager, HubProtocolResolver, Logger, Marker, GlobalHubOptions, LocalHubOptions, blazorDetector, new DefaultServerNameProvider(), clientInvocationManager);
 
         var serverTask = proxy.WaitForServerConnectionAsync(1);
         _ = proxy.StartAsync();
@@ -170,8 +171,8 @@ public class ServiceLifetimeManagerFacts
                 new CustomHubProtocol(),
             },
             NullLogger<DefaultHubProtocolResolver>.Instance);
-        IOptions<HubOptions> globalHubOptions = Options.Create(new HubOptions() { SupportedProtocols = new List<string>() { "json", "messagepack", MockProtocol, "json" } });
-        IOptions<HubOptions<TestHub>> localHubOptions = Options.Create(new HubOptions<TestHub>() { SupportedProtocols = new List<string>() { "json", "messagepack", MockProtocol } });
+        var globalHubOptions = Options.Create(new HubOptions() { SupportedProtocols = new List<string>() { "json", "messagepack", MockProtocol, "json" } });
+        var localHubOptions = Options.Create(new HubOptions<TestHub>() { SupportedProtocols = new List<string>() { "json", "messagepack", MockProtocol } });
         var serviceConnectionManager = new TestServiceConnectionManager<TestHub>();
         var clientInvocationManager = new DefaultClientInvocationManager();
         var serviceLifetimeManager = new ServiceLifetimeManager<TestHub>(serviceConnectionManager,
@@ -212,7 +213,7 @@ public class ServiceLifetimeManagerFacts
         var serviceConnectionManager = new TestServiceConnectionManager<TestHub>();
         var clientConnectionManager = new ClientConnectionManager();
 
-        var context = new ClientConnectionContext(new OpenConnectionMessage("conn1", new Claim[] { }));
+        var context = new ClientConnectionContext(new OpenConnectionMessage("conn1", Array.Empty<Claim>()));
         var connection = new TestServiceConnectionPrivate();
         context.ServiceConnection = connection;
         clientConnectionManager.TryAddClientConnection(context);
@@ -258,67 +259,6 @@ public class ServiceLifetimeManagerFacts
         Assert.Null(hubConnectionContext.Features.Get<ServiceUserIdFeature>());
     }
 
-    private HubLifetimeManager<TestHub> MockLifetimeManager(IServiceConnectionManager<TestHub> serviceConnectionManager, IClientConnectionManager clientConnectionManager = null, IBlazorDetector blazorDetector = null)
-    {
-        clientConnectionManager ??= new ClientConnectionManager();
-
-        var protocolResolver = new DefaultHubProtocolResolver(new IHubProtocol[]
-            {
-                new JsonHubProtocol(),
-                new MessagePackHubProtocol(),
-                new CustomHubProtocol(),
-            },
-            NullLogger<DefaultHubProtocolResolver>.Instance
-        );
-        IOptions<HubOptions> globalHubOptions = Options.Create(new HubOptions() { SupportedProtocols = new List<string>() { MockProtocol } });
-        IOptions<HubOptions<TestHub>> localHubOptions = Options.Create(new HubOptions<TestHub>() { SupportedProtocols = new List<string>() { MockProtocol } });
-
-        var clientInvocationManager = new DefaultClientInvocationManager();
-
-        return new ServiceLifetimeManager<TestHub>(
-            serviceConnectionManager,
-            clientConnectionManager,
-            protocolResolver,
-            Logger,
-            Marker,
-            globalHubOptions,
-            localHubOptions,
-            blazorDetector,
-            new DefaultServerNameProvider(),
-            clientInvocationManager
-        );
-    }
-
-#if NET7_0_OR_GREATER
-    private static ServiceLifetimeManager<TestHub> GetTestClientInvocationServiceLifetimeManager(
-        ServiceConnectionBase serviceConnection, 
-        IServiceConnectionManager<TestHub> serviceConnectionManager, 
-        ClientConnectionManager clientConnectionManager, 
-        IClientInvocationManager clientInvocationManager = null,
-        ClientConnectionContext clientConnectionContext = null,
-        string protocol = "json"
-        )
-    {
-        // Add a client to ClientConnectionManager
-        if (clientConnectionContext != null)
-        {
-            clientConnectionContext.ServiceConnection = serviceConnection;
-            clientConnectionManager.TryAddClientConnection(clientConnectionContext);
-        }
-
-        // Create ServiceLifetimeManager
-        return new ServiceLifetimeManager<TestHub>(serviceConnectionManager,
-            clientConnectionManager, HubProtocolResolver, Logger, Marker, _globalHubOptions, _localHubOptions, null, new DefaultServerNameProvider(), clientInvocationManager ?? new DefaultClientInvocationManager());
-    }
-
-    private static ClientConnectionContext GetClientConnectionContextWithConnection(string connectionId = null, string protocol = null)
-    {
-        var connectMessage = new OpenConnectionMessage(connectionId, new Claim[] { });
-        connectMessage.Protocol = protocol;
-        return new ClientConnectionContext(connectMessage);
-    }
-
-
     [Theory]
     [InlineData("json", true)]
     [InlineData("json", false)]
@@ -332,11 +272,11 @@ public class ServiceLifetimeManagerFacts
         var clientInvocationManager = new DefaultClientInvocationManager();
         var clientConnectionContext = GetClientConnectionContextWithConnection(TestConnectionIds[1], protocol);
 
-        var serviceLifetimeManager = GetTestClientInvocationServiceLifetimeManager(serviceConnection, serviceConnectionManager, new ClientConnectionManager(), clientInvocationManager, clientConnectionContext, protocol);
+        var serviceLifetimeManager = GetTestClientInvocationServiceLifetimeManager(serviceConnection, serviceConnectionManager, new ClientConnectionManager(), clientInvocationManager, clientConnectionContext);
 
         var invocationResult = "invocation-correct-result";
 
-        // Invoke the client 
+        // Invoke the client
         var task = serviceLifetimeManager.InvokeConnectionAsync<string>(TestConnectionIds[1], "InvokedMethod", Array.Empty<object>(), default);
 
         // Check if the caller server sent a ClientInvocationMessage
@@ -386,8 +326,8 @@ public class ServiceLifetimeManagerFacts
         };
 
         var serviceLifetimeManagers = new List<ServiceLifetimeManager<TestHub>>() {
-            GetTestClientInvocationServiceLifetimeManager( new TestServiceConnection(), serviceConnectionManager, clientConnectionManager, clientInvocationManagers[0], null, protocol),
-            GetTestClientInvocationServiceLifetimeManager( new TestServiceConnection(), serviceConnectionManager, clientConnectionManager, clientInvocationManagers[1], clientConnectionContext, protocol)
+            GetTestClientInvocationServiceLifetimeManager( new TestServiceConnection(), serviceConnectionManager, clientConnectionManager, clientInvocationManagers[0], null),
+            GetTestClientInvocationServiceLifetimeManager( new TestServiceConnection(), serviceConnectionManager, clientConnectionManager, clientInvocationManagers[1], clientConnectionContext)
         };
 
         var invocationResult = "invocation-correct-result";
@@ -405,7 +345,7 @@ public class ServiceLifetimeManagerFacts
 
         // The route server receives CompletionMessage
         var completionMessage = isCompletionWithResult
-            ? CompletionMessage.WithResult(invocation.InvocationId, invocationResult) 
+            ? CompletionMessage.WithResult(invocation.InvocationId, invocationResult)
             : CompletionMessage.WithError(invocation.InvocationId, invocationResult);
         await serviceLifetimeManagers[1].SetConnectionResultAsync(invocation.ConnectionId, completionMessage);
 
@@ -427,7 +367,33 @@ public class ServiceLifetimeManagerFacts
             Assert.Equal(invocationResult, e.Message);
         }
     }
-#endif
+
+    private static ServiceLifetimeManager<TestHub> GetTestClientInvocationServiceLifetimeManager(
+        ServiceConnectionBase serviceConnection,
+        IServiceConnectionManager<TestHub> serviceConnectionManager,
+        ClientConnectionManager clientConnectionManager,
+        IClientInvocationManager clientInvocationManager = null,
+        ClientConnectionContext clientConnectionContext = null
+        )
+    {
+        // Add a client to ClientConnectionManager
+        if (clientConnectionContext != null)
+        {
+            clientConnectionContext.ServiceConnection = serviceConnection;
+            clientConnectionManager.TryAddClientConnection(clientConnectionContext);
+        }
+
+        // Create ServiceLifetimeManager
+        return new ServiceLifetimeManager<TestHub>(serviceConnectionManager,
+            clientConnectionManager, HubProtocolResolver, Logger, Marker, GlobalHubOptions, LocalHubOptions, null, new DefaultServerNameProvider(), clientInvocationManager ?? new DefaultClientInvocationManager());
+    }
+
+    private static ClientConnectionContext GetClientConnectionContextWithConnection(string connectionId = null, string protocol = null)
+    {
+        var connectMessage = new OpenConnectionMessage(connectionId, Array.Empty<Claim>());
+        connectMessage.Protocol = protocol;
+        return new ClientConnectionContext(connectMessage);
+    }
 
     private static async Task InvokeMethod(HubLifetimeManager<TestHub> serviceLifetimeManager, string methodName)
     {
@@ -477,52 +443,86 @@ public class ServiceLifetimeManagerFacts
         switch (methodName)
         {
             case "SendAllAsync":
-                Assert.Null(((BroadcastDataMessage) serviceMessage).ExcludedList);
+                Assert.Null(((BroadcastDataMessage)serviceMessage).ExcludedList);
                 break;
             case "SendAllExceptAsync":
-                Assert.Equal(TestConnectionIds, ((BroadcastDataMessage) serviceMessage).ExcludedList);
+                Assert.Equal(TestConnectionIds, ((BroadcastDataMessage)serviceMessage).ExcludedList);
                 break;
             case "SendConnectionAsync":
-                Assert.Equal(TestConnectionIds[0], ((MultiConnectionDataMessage) serviceMessage).ConnectionList[0]);
+                Assert.Equal(TestConnectionIds[0], ((MultiConnectionDataMessage)serviceMessage).ConnectionList[0]);
                 break;
             case "SendConnectionsAsync":
-                Assert.Equal(TestConnectionIds, ((MultiConnectionDataMessage) serviceMessage).ConnectionList);
+                Assert.Equal(TestConnectionIds, ((MultiConnectionDataMessage)serviceMessage).ConnectionList);
                 break;
             case "SendGroupAsync":
-                Assert.Equal(TestGroups[0], ((GroupBroadcastDataMessage) serviceMessage).GroupName);
-                Assert.Null(((GroupBroadcastDataMessage) serviceMessage).ExcludedList);
+                Assert.Equal(TestGroups[0], ((GroupBroadcastDataMessage)serviceMessage).GroupName);
+                Assert.Null(((GroupBroadcastDataMessage)serviceMessage).ExcludedList);
                 break;
             case "SendGroupsAsync":
-                Assert.Equal(TestGroups, ((MultiGroupBroadcastDataMessage) serviceMessage).GroupList);
+                Assert.Equal(TestGroups, ((MultiGroupBroadcastDataMessage)serviceMessage).GroupList);
                 break;
             case "SendGroupExceptAsync":
-                Assert.Equal(TestGroups[0], ((GroupBroadcastDataMessage) serviceMessage).GroupName);
-                Assert.Equal(TestConnectionIds, ((GroupBroadcastDataMessage) serviceMessage).ExcludedList);
+                Assert.Equal(TestGroups[0], ((GroupBroadcastDataMessage)serviceMessage).GroupName);
+                Assert.Equal(TestConnectionIds, ((GroupBroadcastDataMessage)serviceMessage).ExcludedList);
                 break;
             case "SendUserAsync":
-                Assert.Equal(TestUsers[0], ((UserDataMessage) serviceMessage).UserId);
+                Assert.Equal(TestUsers[0], ((UserDataMessage)serviceMessage).UserId);
                 break;
             case "SendUsersAsync":
-                Assert.Equal(TestUsers, ((MultiUserDataMessage) serviceMessage).UserList);
+                Assert.Equal(TestUsers, ((MultiUserDataMessage)serviceMessage).UserList);
                 break;
             case "AddToGroupAsync":
-                Assert.Equal(TestConnectionIds[0], ((JoinGroupWithAckMessage) serviceMessage).ConnectionId);
-                Assert.Equal(TestGroups[0], ((JoinGroupWithAckMessage) serviceMessage).GroupName);
+                Assert.Equal(TestConnectionIds[0], ((JoinGroupWithAckMessage)serviceMessage).ConnectionId);
+                Assert.Equal(TestGroups[0], ((JoinGroupWithAckMessage)serviceMessage).GroupName);
                 break;
             case "RemoveFromGroupAsync":
-                Assert.Equal(TestConnectionIds[0], ((LeaveGroupWithAckMessage) serviceMessage).ConnectionId);
-                Assert.Equal(TestGroups[0], ((LeaveGroupWithAckMessage) serviceMessage).GroupName);
+                Assert.Equal(TestConnectionIds[0], ((LeaveGroupWithAckMessage)serviceMessage).ConnectionId);
+                Assert.Equal(TestGroups[0], ((LeaveGroupWithAckMessage)serviceMessage).GroupName);
                 break;
             default:
                 break;
         }
     }
 
+    private static HubLifetimeManager<TestHub> MockLifetimeManager(IServiceConnectionManager<TestHub> serviceConnectionManager, IClientConnectionManager clientConnectionManager = null, IBlazorDetector blazorDetector = null)
+    {
+        clientConnectionManager ??= new ClientConnectionManager();
+
+        var protocolResolver = new DefaultHubProtocolResolver(new IHubProtocol[]
+            {
+                new JsonHubProtocol(),
+                new MessagePackHubProtocol(),
+                new CustomHubProtocol(),
+            },
+            NullLogger<DefaultHubProtocolResolver>.Instance
+        );
+        var globalHubOptions = Options.Create(new HubOptions() { SupportedProtocols = new List<string>() { MockProtocol } });
+        var localHubOptions = Options.Create(new HubOptions<TestHub>() { SupportedProtocols = new List<string>() { MockProtocol } });
+
+        var clientInvocationManager = new DefaultClientInvocationManager();
+
+        return new ServiceLifetimeManager<TestHub>(
+            serviceConnectionManager,
+            clientConnectionManager,
+            protocolResolver,
+            Logger,
+            Marker,
+            globalHubOptions,
+            localHubOptions,
+            blazorDetector,
+            new DefaultServerNameProvider(),
+            clientInvocationManager
+        );
+    }
+
+#if NET7_0_OR_GREATER
+#endif
+
     private sealed class TestServiceConnectionPrivate : TestServiceConnection
     {
         public ServiceMessage LastMessage { get; private set; }
 
-        protected override Task<bool> SafeWriteAsync(ServiceMessage serviceMessage)
+        public override Task<bool> SafeWriteAsync(ServiceMessage serviceMessage)
         {
             LastMessage = serviceMessage;
             return Task.FromResult(true);
@@ -537,10 +537,7 @@ public class ServiceLifetimeManagerFacts
 
         public int Version => throw new NotImplementedException();
 
-        public ReadOnlyMemory<byte> GetMessageBytes(HubMessage message)
-        {
-            return new byte[] { };
-        }
+        public ReadOnlyMemory<byte> GetMessageBytes(HubMessage message) => ""u8.ToArray();
 
         public bool IsVersionSupported(int version)
         {

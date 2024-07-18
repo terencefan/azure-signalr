@@ -13,8 +13,6 @@ internal sealed class TestServiceConnectionContainer : IServiceConnectionContain
 {
     private readonly Action<(ServiceMessage, IServiceConnectionContainer)> _validator;
 
-    public event Action<StatusChange> ConnectionStatusChanged;
-
     public string HubName { get; }
 
     public ServiceConnectionStatus Status { get; }
@@ -40,6 +38,8 @@ internal sealed class TestServiceConnectionContainer : IServiceConnectionContain
         HubName = name;
     }
 
+    public event Action<StatusChange> ConnectionStatusChanged;
+
     public Task StartAsync()
     {
         ConnectionStatusChanged?.Invoke(new StatusChange(ServiceConnectionStatus.Connecting, Status));
@@ -55,6 +55,12 @@ internal sealed class TestServiceConnectionContainer : IServiceConnectionContain
     {
         _validator?.Invoke((serviceMessage, this));
         return Task.CompletedTask;
+    }
+
+    public Task<bool> SafeWriteAsync(ServiceMessage serviceMessage)
+    {
+        _validator?.Invoke((serviceMessage, this));
+        return Task.FromResult(true);
     }
 
     public Task<bool> WriteAckableMessageAsync(ServiceMessage serviceMessage,
