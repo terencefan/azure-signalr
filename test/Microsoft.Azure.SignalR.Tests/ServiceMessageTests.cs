@@ -22,17 +22,18 @@ using Microsoft.Extensions.Logging.Abstractions;
 using Xunit;
 using Xunit.Abstractions;
 using static Microsoft.Azure.SignalR.Tests.ServiceConnectionTests;
+
 using SignalRProtocol = Microsoft.AspNetCore.SignalR.Protocol;
 
 namespace Microsoft.Azure.SignalR.Tests;
 
 public class ServiceMessageTests : VerifiableLoggedTest
 {
-    private const string _signingKey = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+    private const string SigningKey = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
 
-    private const string _aadConnectionString = "endpoint=https://localhost;authType=aad;";
+    private const string MicrosoftEntraConnectionString = "endpoint=https://localhost;authType=aad;";
 
-    private const string _keyConnectionString = "endpoint=https://localhost;accessKey=" + _signingKey;
+    private const string LocalConnectionString = "endpoint=https://localhost;accessKey=" + SigningKey;
 
     public ServiceMessageTests(ITestOutputHelper output) : base(output)
     {
@@ -192,7 +193,7 @@ public class ServiceMessageTests : VerifiableLoggedTest
         var message = new AccessKeyResponseMessage()
         {
             Kid = "foo",
-            AccessKey = _signingKey
+            AccessKey = SigningKey
         };
         await connection.WriteFromServiceAsync(message);
 
@@ -316,10 +317,10 @@ public class ServiceMessageTests : VerifiableLoggedTest
         switch (keyTypeName)
         {
             case nameof(AccessKey):
-                return new ServiceEndpoint(_keyConnectionString);
+                return new ServiceEndpoint(LocalConnectionString);
 
             case nameof(AccessKeyForMicrosoftEntra):
-                var endpoint = new ServiceEndpoint(_aadConnectionString);
+                var endpoint = new ServiceEndpoint(MicrosoftEntraConnectionString);
                 var p = typeof(ServiceEndpoint).GetProperty("AccessKey", BindingFlags.NonPublic | BindingFlags.Instance);
                 p.SetValue(endpoint, new TestAadAccessKey());
                 return endpoint;

@@ -1,4 +1,7 @@
-﻿using System;
+﻿// Copyright (c) Microsoft. All rights reserved.
+// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -34,13 +37,13 @@ public class ServiceConnectionContainerBaseTests : VerifiableLoggedTest
             return true;
         }))
         {
-            List<IServiceConnection> connections = new List<IServiceConnection>
+            var connections = new List<IServiceConnection>
             {
                 new SimpleTestServiceConnection(),
                 new SimpleTestServiceConnection(),
                 new SimpleTestServiceConnection()
             };
-            using TestServiceConnectionContainer container =
+            using var container =
                 new TestServiceConnectionContainer(
                     connections,
                     factory: new SimpleTestServiceConnectionFactory(),
@@ -95,13 +98,13 @@ public class ServiceConnectionContainerBaseTests : VerifiableLoggedTest
             return true;
         }))
         {
-            List<IServiceConnection> connections = new List<IServiceConnection>
+            var connections = new List<IServiceConnection>
             {
                 new SimpleTestServiceConnection(),
                 new SimpleTestServiceConnection(),
                 new SimpleTestServiceConnection()
             };
-            using TestServiceConnectionContainer container =
+            using var container =
                 new TestServiceConnectionContainer(
                     connections,
                     factory: new SimpleTestServiceConnectionFactory(),
@@ -163,15 +166,15 @@ public class ServiceConnectionContainerBaseTests : VerifiableLoggedTest
     [InlineData(ServiceConnectionStatus.Inited)]
     internal async Task TestIfConnectionWillNotRestartAfterShutdown(ServiceConnectionStatus status)
     {
-        List<IServiceConnection> connections = new List<IServiceConnection>
+        var connections = new List<IServiceConnection>
         {
             new SimpleTestServiceConnection(),
             new SimpleTestServiceConnection(status: status)
         };
 
-        IServiceConnection connection = connections[1];
+        var connection = connections[1];
 
-        using TestServiceConnectionContainer container = new TestServiceConnectionContainer(connections, factory: new SimpleTestServiceConnectionFactory());
+        using var container = new TestServiceConnectionContainer(connections, factory: new SimpleTestServiceConnectionFactory());
         container.ShutdownForTest();
 
         await container.OnConnectionCompleteForTestShutdown(connection);
@@ -192,12 +195,12 @@ public class ServiceConnectionContainerBaseTests : VerifiableLoggedTest
     [InlineData(GracefulShutdownMode.MigrateClients)]
     internal async Task TestOffline(GracefulShutdownMode mode)
     {
-        List<IServiceConnection> connections = new List<IServiceConnection>
+        var connections = new List<IServiceConnection>
         {
             new SimpleTestServiceConnection(),
             new SimpleTestServiceConnection()
         };
-        using TestServiceConnectionContainer container = new TestServiceConnectionContainer(connections, factory: new SimpleTestServiceConnectionFactory());
+        using var container = new TestServiceConnectionContainer(connections, factory: new SimpleTestServiceConnectionFactory());
 
         foreach (SimpleTestServiceConnection c in connections)
         {

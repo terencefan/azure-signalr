@@ -6,13 +6,10 @@ namespace Microsoft.Azure.SignalR.Tests;
 
 internal class TestServiceConnectionForCloseAsync : TestServiceConnection
 {
-    public TestServiceConnectionForCloseAsync() : base(ServiceConnectionStatus.Connected, false, clientInvocationManager: new DefaultClientInvocationManager())
+    public TestServiceConnectionForCloseAsync() : base(ServiceConnectionStatus.Connected, false)
     {
     }
 
-    /**
-     * Register an outgoing Task.
-     */
     protected override Task OnClientConnectedAsync(OpenConnectionMessage openConnectionMessage)
     {
         return Task.CompletedTask;
