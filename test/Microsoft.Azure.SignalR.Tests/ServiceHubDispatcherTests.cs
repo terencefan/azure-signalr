@@ -88,7 +88,7 @@ public class ServiceHubDispatcherTests
 
         private readonly StrongBox<int> _index;
 
-        public IReadOnlyDictionary<string, ClientConnectionContext> ClientConnections => throw new NotImplementedException();
+        public IReadOnlyDictionary<string, IClientConnection> ClientConnections => throw new NotImplementedException();
 
         public TestClientConnectionManager(StrongBox<int> index)
         {
@@ -101,12 +101,17 @@ public class ServiceHubDispatcherTests
             CompleteIndex = Interlocked.Increment(ref _index.Value);
         }
 
-        public bool TryAddClientConnection(ClientConnectionContext connection)
+        public bool TryAddClientConnection(IClientConnection connection)
         {
             throw new NotImplementedException();
         }
 
-        public bool TryRemoveClientConnection(string connectionId, out ClientConnectionContext connection)
+        public bool TryRemoveClientConnection(string connectionId, out IClientConnection connection)
+        {
+            throw new NotImplementedException();
+        }
+
+        public bool TryGetClientConnection(string connectionId, out IClientConnection connection)
         {
             throw new NotImplementedException();
         }

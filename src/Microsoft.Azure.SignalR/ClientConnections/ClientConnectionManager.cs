@@ -10,20 +10,15 @@ namespace Microsoft.Azure.SignalR;
 
 internal class ClientConnectionManager : IClientConnectionManager
 {
-    private readonly ConcurrentDictionary<string, ClientConnectionContext> _clientConnections =
-        new ConcurrentDictionary<string, ClientConnectionContext>();
+    private readonly ConcurrentDictionary<string, IClientConnection> _clientConnections = new();
 
-    public IReadOnlyDictionary<string, ClientConnectionContext> ClientConnections => _clientConnections;
+    public IReadOnlyDictionary<string, IClientConnection> ClientConnections => _clientConnections;
 
-    public bool TryAddClientConnection(ClientConnectionContext connection)
-    {
-        return _clientConnections.TryAdd(connection.ConnectionId, connection);
-    }
+    public bool TryAddClientConnection(IClientConnection connection) => _clientConnections.TryAdd(connection.ConnectionId, connection);
 
-    public bool TryRemoveClientConnection(string connectionId, out ClientConnectionContext connection)
-    {
-        return _clientConnections.TryRemove(connectionId, out connection);
-    }
+    public bool TryRemoveClientConnection(string connectionId, out IClientConnection connection) => _clientConnections.TryRemove(connectionId, out connection);
 
-    public Task WhenAllCompleted() => Task.WhenAll(_clientConnections.Select(c => c.Value.LifetimeTask));
+    public bool TryGetClientConnection(string connectionId, out IClientConnection connection) => _clientConnections.TryGetValue(connectionId, out connection);
+
+    public Task WhenAllCompleted() => Task.WhenAll(_clientConnections.Select(c => (c.Value as ClientConnectionContext).LifetimeTask));
 }

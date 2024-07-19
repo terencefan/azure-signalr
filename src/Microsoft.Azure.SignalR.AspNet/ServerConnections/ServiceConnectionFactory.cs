@@ -8,7 +8,7 @@ internal class ServiceConnectionFactory : IServiceConnectionFactory
 {
     private readonly IServiceProtocol _serviceProtocol;
 
-    private readonly IClientConnectionManager _clientConnectionManager;
+    private readonly IAspNetClientConnectionManager _clientConnectionManager;
 
     private readonly IConnectionFactory _connectionFactory;
 
@@ -20,7 +20,7 @@ internal class ServiceConnectionFactory : IServiceConnectionFactory
 
     public ServiceConnectionFactory(
         IServiceProtocol serviceProtocol,
-        IClientConnectionManager clientConnectionManager,
+        IAspNetClientConnectionManager clientConnectionManager,
         IConnectionFactory connectionFactory,
         ILoggerFactory logger,
         IServerNameProvider nameProvider,

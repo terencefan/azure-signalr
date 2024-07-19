@@ -31,7 +31,7 @@ internal partial class ServiceConnection : ServiceConnectionBase
 
     private readonly IConnectionFactory _connectionFactory;
 
-    private readonly IClientConnectionManager _clientConnectionManager;
+    private readonly IAspNetClientConnectionManager _clientConnectionManager;
 
     private readonly AckHandler _ackHandler;
 
@@ -41,7 +41,7 @@ internal partial class ServiceConnection : ServiceConnectionBase
         HubServiceEndpoint endpoint,
         IServiceProtocol serviceProtocol,
         IConnectionFactory connectionFactory,
-        IClientConnectionManager clientConnectionManager,
+        IAspNetClientConnectionManager clientConnectionManager,
         ILoggerFactory loggerFactory,
         IServiceMessageHandler serviceMessageHandler,
         IServiceEventHandler serviceEventHandler,

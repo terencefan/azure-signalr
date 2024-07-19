@@ -77,7 +77,7 @@ public class ServiceConnectionTests(ITestOutputHelper output) : VerifiableLogged
             var scm = new TestServiceConnectionHandler();
             hubConfig.Resolver.Register(typeof(IServiceConnectionManager), () => scm);
             var ccm = new ClientConnectionManager(hubConfig, loggerFactory);
-            hubConfig.Resolver.Register(typeof(IClientConnectionManager), () => ccm);
+            hubConfig.Resolver.Register(typeof(IAspNetClientConnectionManager), () => ccm);
             DispatcherHelper.PrepareAndGetDispatcher(new TestAppBuilder(), hubConfig, new ServiceOptions { ConnectionString = ConnectionString }, appName, loggerFactory);
             using var proxy = new TestServiceConnectionProxy(ccm, loggerFactory: loggerFactory);
             // start the server connection
@@ -163,7 +163,7 @@ public class ServiceConnectionTests(ITestOutputHelper output) : VerifiableLogged
             var scm = new TestServiceConnectionHandler();
             hubConfig.Resolver.Register(typeof(IServiceConnectionManager), () => scm);
             var ccm = new ClientConnectionManager(hubConfig, loggerFactory);
-            hubConfig.Resolver.Register(typeof(IClientConnectionManager), () => ccm);
+            hubConfig.Resolver.Register(typeof(IAspNetClientConnectionManager), () => ccm);
             DispatcherHelper.PrepareAndGetDispatcher(new TestAppBuilder(), hubConfig, new ServiceOptions { ConnectionString = ConnectionString }, appName, loggerFactory);
             using var proxy = new TestServiceConnectionProxy(ccm, loggerFactory: loggerFactory);
             // start the server connection
@@ -205,7 +205,7 @@ public class ServiceConnectionTests(ITestOutputHelper output) : VerifiableLogged
             var scm = new TestServiceConnectionHandler();
             hubConfig.Resolver.Register(typeof(IServiceConnectionManager), () => scm);
             var ccm = new ClientConnectionManager(hubConfig, loggerFactory);
-            hubConfig.Resolver.Register(typeof(IClientConnectionManager), () => ccm);
+            hubConfig.Resolver.Register(typeof(IAspNetClientConnectionManager), () => ccm);
             DispatcherHelper.PrepareAndGetDispatcher(new TestAppBuilder(), hubConfig,
                 new ServiceOptions {ConnectionString = ConnectionString}, appName, loggerFactory);
             using var proxy = new TestServiceConnectionProxy(ccm, loggerFactory: loggerFactory);
@@ -264,7 +264,7 @@ public class ServiceConnectionTests(ITestOutputHelper output) : VerifiableLogged
         {
             var hubConfig = new HubConfiguration();
             var ccm = new ClientConnectionManager(hubConfig, loggerFactory);
-            hubConfig.Resolver.Register(typeof(IClientConnectionManager), () => ccm);
+            hubConfig.Resolver.Register(typeof(IAspNetClientConnectionManager), () => ccm);
             using var proxy = new TestServiceConnectionProxy(ccm, loggerFactory: loggerFactory);
             // start the server connection
             await proxy.StartServiceAsync().OrTimeout();
@@ -299,7 +299,7 @@ public class ServiceConnectionTests(ITestOutputHelper output) : VerifiableLogged
         {
             var hubConfig = new HubConfiguration();
             var ccm = new ClientConnectionManager(hubConfig, loggerFactory);
-            hubConfig.Resolver.Register(typeof(IClientConnectionManager), () => ccm);
+            hubConfig.Resolver.Register(typeof(IAspNetClientConnectionManager), () => ccm);
             using var proxy = new TestServiceConnectionProxy(ccm, loggerFactory: loggerFactory);
             // start the server connection
             await proxy.StartServiceAsync().OrTimeout();
@@ -333,7 +333,7 @@ public class ServiceConnectionTests(ITestOutputHelper output) : VerifiableLogged
             var scm = new TestServiceConnectionHandler();
             hubConfig.Resolver.Register(typeof(IServiceConnectionManager), () => scm);
             var ccm = new ClientConnectionManager(hubConfig, loggerFactory);
-            hubConfig.Resolver.Register(typeof(IClientConnectionManager), () => ccm);
+            hubConfig.Resolver.Register(typeof(IAspNetClientConnectionManager), () => ccm);
             DispatcherHelper.PrepareAndGetDispatcher(new TestAppBuilder(), hubConfig,
                 new ServiceOptions { ConnectionString = ConnectionString }, appName, loggerFactory);
             using var proxy = new TestServiceConnectionProxy(ccm, loggerFactory);
@@ -389,7 +389,7 @@ public class ServiceConnectionTests(ITestOutputHelper output) : VerifiableLogged
             var scm = new TestServiceConnectionHandler();
             hubConfig.Resolver.Register(typeof(IServiceConnectionManager), () => scm);
             var ccm = new ClientConnectionManager(hubConfig, loggerFactory);
-            hubConfig.Resolver.Register(typeof(IClientConnectionManager), () => ccm);
+            hubConfig.Resolver.Register(typeof(IAspNetClientConnectionManager), () => ccm);
             DispatcherHelper.PrepareAndGetDispatcher(new TestAppBuilder(), hubConfig,
                 new ServiceOptions { ConnectionString = ConnectionString }, appName, loggerFactory);
             using var proxy = new TestServiceConnectionProxy(ccm, loggerFactory);
@@ -438,7 +438,7 @@ public class ServiceConnectionTests(ITestOutputHelper output) : VerifiableLogged
             var scm = new TestServiceConnectionHandler();
             hubConfig.Resolver.Register(typeof(IServiceConnectionManager), () => scm);
             var ccm = new ClientConnectionManager(hubConfig, loggerFactory);
-            hubConfig.Resolver.Register(typeof(IClientConnectionManager), () => ccm);
+            hubConfig.Resolver.Register(typeof(IAspNetClientConnectionManager), () => ccm);
             DispatcherHelper.PrepareAndGetDispatcher(new TestAppBuilder(), hubConfig,
                 new ServiceOptions { ConnectionString = ConnectionString }, appName, loggerFactory);
             using var proxy = new TestServiceConnectionProxy(ccm, loggerFactory);
@@ -497,7 +497,7 @@ public class ServiceConnectionTests(ITestOutputHelper output) : VerifiableLogged
             var scm = new TestServiceConnectionHandler();
             hubConfig.Resolver.Register(typeof(IServiceConnectionManager), () => scm);
             var ccm = new ClientConnectionManager(hubConfig, loggerFactory);
-            hubConfig.Resolver.Register(typeof(IClientConnectionManager), () => ccm);
+            hubConfig.Resolver.Register(typeof(IAspNetClientConnectionManager), () => ccm);
             DispatcherHelper.PrepareAndGetDispatcher(new TestAppBuilder(), hubConfig, new ServiceOptions { ConnectionString = ConnectionString }, appName, loggerFactory);
             using var proxy = new TestServiceConnectionProxy(ccm, loggerFactory: loggerFactory);
             // prepare 2 clients with different instancesId connected

@@ -27,13 +27,13 @@ internal class ServiceConnectionProxy : IClientConnectionManager, IClientConnect
 
     private readonly PipeOptions _clientPipeOptions;
 
-    private readonly ConcurrentDictionary<string, TaskCompletionSource<ConnectionContext>> _waitForConnectionOpen = new ConcurrentDictionary<string, TaskCompletionSource<ConnectionContext>>();
+    private readonly ConcurrentDictionary<string, TaskCompletionSource<IClientConnection>> _waitForConnectionOpen = new ConcurrentDictionary<string, TaskCompletionSource<IClientConnection>>();
 
     private readonly ConcurrentDictionary<string, TaskCompletionSource<object>> _waitForConnectionClose = new ConcurrentDictionary<string, TaskCompletionSource<object>>();
 
     private readonly ConcurrentDictionary<Type, TaskCompletionSource<ServiceMessage>> _waitForApplicationMessage = new ConcurrentDictionary<Type, TaskCompletionSource<ServiceMessage>>();
 
-    private readonly ConcurrentDictionary<int, TaskCompletionSource<ConnectionContext>> _waitForServerConnection = new ConcurrentDictionary<int, TaskCompletionSource<ConnectionContext>>();
+    private readonly ConcurrentDictionary<int, TaskCompletionSource<IClientConnection>> _waitForServerConnection = new ConcurrentDictionary<int, TaskCompletionSource<IClientConnection>>();
 
     private int _connectedServerConnectionCount;
 
@@ -53,12 +53,10 @@ internal class ServiceConnectionProxy : IClientConnectionManager, IClientConnect
 
     public ConnectionDelegate ConnectionDelegateCallback { get; }
 
-    public ConcurrentDictionary<string, TestConnection> ConnectionContexts { get; } =
+    public ConcurrentDictionary<string, TestConnection> IClientConnections { get; } =
         new ConcurrentDictionary<string, TestConnection>();
 
     public ConcurrentDictionary<string, ServiceConnection> ServiceConnections { get; } = new ConcurrentDictionary<string, ServiceConnection>();
-
-    public IReadOnlyDictionary<string, ClientConnectionContext> ClientConnections => ClientConnectionManager.ClientConnections;
 
     public bool AllowStatefulReconnects { get; }
 
@@ -66,12 +64,13 @@ internal class ServiceConnectionProxy : IClientConnectionManager, IClientConnect
 
     public Channel<ServiceMessage> ApplicationMessages { get; } = Channel.CreateUnbounded<ServiceMessage>();
 
-    public ServiceConnectionProxy(
-                        ConnectionDelegate callback = null,
-        PipeOptions clientPipeOptions = null,
-        Func<Func<TestConnection, Task>, TestConnectionFactory> connectionFactoryCallback = null,
-        int connectionCount = 1,
-        bool allowStatefulReconnects = false)
+    public IReadOnlyDictionary<string, IClientConnection> ClientConnections => throw new NotImplementedException();
+
+    public ServiceConnectionProxy(ConnectionDelegate callback = null,
+                                  PipeOptions clientPipeOptions = null,
+                                  Func<Func<TestConnection, Task>, TestConnectionFactory> connectionFactoryCallback = null,
+                                  int connectionCount = 1,
+                                  bool allowStatefulReconnects = false)
     {
         ConnectionFactory = connectionFactoryCallback?.Invoke(ConnectionFactoryCallbackAsync) ?? new TestConnectionFactory(ConnectionFactoryCallbackAsync);
         ClientConnectionManager = new ClientConnectionManager();
@@ -100,7 +99,7 @@ internal class ServiceConnectionProxy : IClientConnectionManager, IClientConnect
     }
 
     public IServiceConnection Create(HubServiceEndpoint endpoint,
-                                         IServiceMessageHandler serviceMessageHandler,
+                                     IServiceMessageHandler serviceMessageHandler,
                                      AckHandler ackHandler,
                                      ServiceConnectionType type)
     {
@@ -185,7 +184,7 @@ internal class ServiceConnectionProxy : IClientConnectionManager, IClientConnect
     public void Stop()
     {
         _ = Task.WhenAll(ServiceConnections.Select(c => c.Value.StopAsync()));
-        foreach (var connectionContext in ConnectionContexts)
+        foreach (var connectionContext in IClientConnections)
         {
             connectionContext.Value.Application.Input.CancelPendingRead();
         }
@@ -205,7 +204,7 @@ internal class ServiceConnectionProxy : IClientConnectionManager, IClientConnect
 
             if (connection.Value.Status == ServiceConnectionStatus.Connected)
             {
-                var context = ConnectionContexts[connection.Key];
+                var context = IClientConnections[connection.Key];
                 SharedServiceProtocol.WriteMessage(message, context.Application.Output);
                 await context.Application.Output.FlushAsync();
                 return;
@@ -213,9 +212,9 @@ internal class ServiceConnectionProxy : IClientConnectionManager, IClientConnect
         }
     }
 
-    public Task<ConnectionContext> WaitForConnectionAsync(string connectionId)
+    public Task<IClientConnection> WaitForConnectionAsync(string connectionId)
     {
-        return _waitForConnectionOpen.GetOrAdd(connectionId, key => new TaskCompletionSource<ConnectionContext>()).Task;
+        return _waitForConnectionOpen.GetOrAdd(connectionId, key => new TaskCompletionSource<IClientConnection>()).Task;
     }
 
     public Task WaitForConnectionCloseAsync(string connectionId)
@@ -228,12 +227,12 @@ internal class ServiceConnectionProxy : IClientConnectionManager, IClientConnect
         return _waitForApplicationMessage.GetOrAdd(type, key => new TaskCompletionSource<ServiceMessage>()).Task;
     }
 
-    public Task<ConnectionContext> WaitForServerConnectionAsync(int count)
+    public Task<IClientConnection> WaitForServerConnectionAsync(int count)
     {
-        return _waitForServerConnection.GetOrAdd(count, key => new TaskCompletionSource<ConnectionContext>()).Task;
+        return _waitForServerConnection.GetOrAdd(count, key => new TaskCompletionSource<IClientConnection>()).Task;
     }
 
-    public bool TryAddClientConnection(ClientConnectionContext connection)
+    public bool TryAddClientConnection(IClientConnection connection)
     {
         if (ClientConnectionManager.TryAddClientConnection(connection))
         {
@@ -246,7 +245,7 @@ internal class ServiceConnectionProxy : IClientConnectionManager, IClientConnect
         return false;
     }
 
-    public bool TryRemoveClientConnection(string connectionId, out ClientConnectionContext connection)
+    public bool TryRemoveClientConnection(string connectionId, out IClientConnection connection)
     {
         if (ClientConnectionManager.TryRemoveClientConnection(connectionId, out connection))
         {
@@ -269,13 +268,20 @@ internal class ServiceConnectionProxy : IClientConnectionManager, IClientConnect
         return Task.CompletedTask;
     }
 
+    private static Task OnConnectionAsync(ConnectionContext connection)
+    {
+        var tcs = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
+        connection.ConnectionClosed.Register(() => tcs.TrySetResult(null));
+        return tcs.Task;
+    }
+
     private async Task ConnectionFactoryCallbackAsync(TestConnection connection)
     {
         while (NewConnectionsCreationPaused)
         {
             await Task.Delay(10);
         }
-        ConnectionContexts.TryAdd(connection.ConnectionId, connection);
+        IClientConnections.TryAdd(connection.ConnectionId, connection);
         // Start a process for each server connection
         _ = StartProcessApplicationMessagesAsync(connection);
     }
@@ -295,15 +301,6 @@ internal class ServiceConnectionProxy : IClientConnectionManager, IClientConnect
         }
     }
 
-    private Task OnConnectionAsync(ConnectionContext connection)
-    {
-        var tcs = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
-
-        connection.ConnectionClosed.Register(() => tcs.TrySetResult(null));
-
-        return tcs.Task;
-    }
-
     private void AddApplicationMessage(Type type, ServiceMessage message)
     {
         if (_waitForApplicationMessage.TryRemove(type, out var tcs))
@@ -311,5 +308,10 @@ internal class ServiceConnectionProxy : IClientConnectionManager, IClientConnect
             tcs.TrySetResult(message);
         }
         ApplicationMessages.Writer.TryWrite(message);
+    }
+
+    public bool TryGetClientConnection(string connectionId, out IClientConnection connection)
+    {
+        throw new NotImplementedException();
     }
 }

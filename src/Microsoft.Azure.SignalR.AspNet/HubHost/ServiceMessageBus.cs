@@ -16,7 +16,7 @@ namespace Microsoft.Azure.SignalR.AspNet
     {
         private readonly IMessageParser _parser;
         private readonly IServiceConnectionManager _serviceConnectionManager;
-        private readonly IClientConnectionManager _clientConnectionManager;
+        private readonly IAspNetClientConnectionManager _clientConnectionManager;
         private readonly IAckHandler _ackHandler;
         private readonly ILogger<ServiceMessageBus> _logger;
 
@@ -24,7 +24,7 @@ namespace Microsoft.Azure.SignalR.AspNet
         {
             // TODO: find a more decent way instead of DI, it can be easily overriden
             _serviceConnectionManager = resolver.Resolve<IServiceConnectionManager>() ?? throw new ArgumentNullException(nameof(IServiceConnectionManager));
-            _clientConnectionManager = resolver.Resolve<IClientConnectionManager>() ?? throw new ArgumentNullException(nameof(IClientConnectionManager));
+            _clientConnectionManager = resolver.Resolve<IAspNetClientConnectionManager>() ?? throw new ArgumentNullException(nameof(IAspNetClientConnectionManager));
             _parser = resolver.Resolve<IMessageParser>() ?? throw new ArgumentNullException(nameof(IMessageParser));
             _ackHandler = resolver.Resolve<IAckHandler>() ?? throw new ArgumentNullException(nameof(IAckHandler));
             _logger = logger ?? throw new ArgumentNullException(nameof(ILogger<ServiceMessageBus>));
@@ -91,7 +91,7 @@ namespace Microsoft.Azure.SignalR.AspNet
                         {
                             // If the client connection is connected to local server connection, 
                             // send back directly from the established server connection
-                            await conn.WriteMessageAsync(connectionDataMessage);
+                            await (conn as ClientConnectionContext).WriteMessageAsync(connectionDataMessage);
                         }
                         else
                         {
