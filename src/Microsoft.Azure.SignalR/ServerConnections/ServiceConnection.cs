@@ -178,10 +178,12 @@ internal partial class ServiceConnection : ServiceConnectionBase
         var connectionId = closeConnectionMessage.ConnectionId;
         // make sure there is no await operation before _bufferingMessages.
         _bufferingMessages.Remove(connectionId);
-        if (_clientConnectionManager.ClientConnections.TryGetValue(connectionId, out var context))
+        if (_clientConnectionManager.TryGetClientConnection(connectionId, out var clientConnection))
         {
             if (closeConnectionMessage.Headers.TryGetValue(Constants.AsrsMigrateTo, out var to))
             {
+                var context = clientConnection as ClientConnectionContext;
+
                 context.AbortOnClose = false;
                 context.Features.Set<IConnectionMigrationFeature>(new ConnectionMigrationFeature(ServerId, to));
 
@@ -203,7 +205,7 @@ internal partial class ServiceConnection : ServiceConnectionBase
         {
             MessageLog.ReceiveMessageFromService(Logger, connectionDataMessage);
         }
-        if (_clientConnectionManager.ClientConnections.TryGetValue(connectionDataMessage.ConnectionId, out var connection))
+        if (_clientConnectionManager.TryGetClientConnection(connectionDataMessage.ConnectionId, out var connection))
         {
             try
             {
@@ -228,6 +230,8 @@ internal partial class ServiceConnection : ServiceConnectionBase
                 }
                 else
                 {
+                    var context = connection as ClientConnectionContext;
+
                     // make sure there is no await operation before _bufferingMessages.
                     if (_bufferingMessages.TryGetValue(connectionDataMessage.ConnectionId, out var list))
                     {
@@ -237,20 +241,20 @@ internal partial class ServiceConnection : ServiceConnectionBase
                         {
                             using (owner)
                             {
-                                await connection.WriteMessageAsync(new ReadOnlySequence<byte>(owner.Memory));
+                                await context.WriteMessageAsync(new ReadOnlySequence<byte>(owner.Memory));
                                 length += owner.Memory.Length;
                             }
                         }
                         var payload = connectionDataMessage.Payload;
                         length += payload.Length;
                         Log.WriteMessageToApplication(Logger, length, connectionDataMessage.ConnectionId);
-                        await connection.WriteMessageAsync(payload);
+                        await context.WriteMessageAsync(payload);
                     }
                     else
                     {
                         var payload = connectionDataMessage.Payload;
                         Log.WriteMessageToApplication(Logger, payload.Length, connectionDataMessage.ConnectionId);
-                        await connection.WriteMessageAsync(payload);
+                        await context.WriteMessageAsync(payload);
                     }
                 }
             }
@@ -520,17 +524,17 @@ internal partial class ServiceConnection : ServiceConnectionBase
     private async Task PerformDisconnectAsyncCore(string connectionId)
     {
         var connection = RemoveClientConnection(connectionId);
-        if (connection != null)
+        if (connection is ClientConnectionContext context)
         {
             // In normal close, service already knows the client is closed, no need to be informed.
-            connection.AbortOnClose = false;
+            context.AbortOnClose = false;
 
             // We're done writing to the application output
             // Let the connection complete incoming
-            connection.CompleteIncoming();
+            context.CompleteIncoming();
 
             // wait for the connection's lifetime task to end
-            var lifetime = connection.LifetimeTask;
+            var lifetime = context.LifetimeTask;
 
             // Wait on the application task to complete
             // We wait gracefully here to be consistent with self-host SignalR
@@ -545,7 +549,7 @@ internal partial class ServiceConnection : ServiceConnectionBase
         }
     }
 
-    private ClientConnectionContext RemoveClientConnection(string connectionId)
+    private IClientConnection RemoveClientConnection(string connectionId)
     {
         _connectionIds.TryRemove(connectionId, out _);
         _clientConnectionManager.TryRemoveClientConnection(connectionId, out var connection);

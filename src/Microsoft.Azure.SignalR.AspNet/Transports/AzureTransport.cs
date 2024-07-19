@@ -23,7 +23,7 @@ namespace Microsoft.Azure.SignalR.AspNet
         private readonly JsonSerializer _serializer;
         private readonly IServiceProtocol _serviceProtocol;
         private readonly ILogger _logger;
-        private readonly IClientConnectionManager _clientConnectionManager;
+        private readonly IAspNetClientConnectionManager _clientConnectionManager;
 
         public AzureTransport(HostContext context, IDependencyResolver resolver)
         {
@@ -35,7 +35,7 @@ namespace Microsoft.Azure.SignalR.AspNet
             _logger = resolver.Resolve<ILoggerFactory>()?.CreateLogger<AzureTransport>() ??
                       NullLogger<AzureTransport>.Instance;
 
-            _clientConnectionManager = resolver.Resolve<IClientConnectionManager>();
+            _clientConnectionManager = resolver.Resolve<IAspNetClientConnectionManager>();
         }
 
         public Func<string, Task> Received { get; set; }
@@ -101,7 +101,7 @@ namespace Microsoft.Azure.SignalR.AspNet
         {
             if (_clientConnectionManager.TryGetClientConnection(ConnectionId, out var connection))
             {
-                return connection.WriteAsync(ConnectionId, value, _serviceProtocol, _serializer, _pool);
+                return (connection as ClientConnectionContext).WriteAsync(ConnectionId, value, _serviceProtocol, _serializer, _pool);
             }
             throw new InvalidOperationException("No service connection found when sending message");
         }

@@ -4,32 +4,23 @@
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Threading.Tasks;
-using Microsoft.AspNetCore.Connections;
 using Microsoft.Azure.SignalR.Protocol;
 
 namespace Microsoft.Azure.SignalR.AspNet.Tests;
 
-internal sealed class TestClientConnectionManager : IClientConnectionManager
+internal sealed class TestClientConnectionManager(IServiceConnection serviceConnection = null) : IAspNetClientConnectionManager
 {
-    private readonly IServiceConnection _serviceConnection;
-
-    private readonly ConcurrentDictionary<string, TaskCompletionSource<ConnectionContext>> _waitForConnectionOpen = new ConcurrentDictionary<string, TaskCompletionSource<ConnectionContext>>();
-
     public ConcurrentDictionary<string, TestTransport> CurrentTransports = new ConcurrentDictionary<string, TestTransport>();
 
-    private ConcurrentDictionary<string, ClientConnectionContext> _connections = new ConcurrentDictionary<string, ClientConnectionContext>();
+    private readonly IServiceConnection _serviceConnection = serviceConnection;
 
-    public IReadOnlyDictionary<string, ClientConnectionContext> ClientConnections => _connections;
+    private readonly ConcurrentDictionary<string, TaskCompletionSource<IClientConnection>> _waitForConnectionOpen = new ConcurrentDictionary<string, TaskCompletionSource<IClientConnection>>();
 
-    public TestClientConnectionManager(IServiceConnection serviceConnection = null)
-    {
-        _serviceConnection = serviceConnection;
-    }
+    private readonly ConcurrentDictionary<string, IClientConnection> _connections = new ConcurrentDictionary<string, IClientConnection>();
 
-    public Task WhenAllCompleted()
-    {
-        return Task.CompletedTask;
-    }
+    public IReadOnlyDictionary<string, IClientConnection> ClientConnections => _connections;
+
+    public Task WhenAllCompleted() => Task.CompletedTask;
 
     public Task<IServiceTransport> CreateConnection(OpenConnectionMessage message)
     {
@@ -39,25 +30,25 @@ internal sealed class TestClientConnectionManager : IClientConnectionManager
         };
         CurrentTransports.TryAdd(message.ConnectionId, transport);
 
-        var tcs = _waitForConnectionOpen.GetOrAdd(message.ConnectionId, i => new TaskCompletionSource<ConnectionContext>(TaskCreationOptions.RunContinuationsAsynchronously));
+        var tcs = _waitForConnectionOpen.GetOrAdd(message.ConnectionId, i => new TaskCompletionSource<IClientConnection>(TaskCreationOptions.RunContinuationsAsynchronously));
 
         tcs.TrySetResult(null);
 
         return Task.FromResult<IServiceTransport>(transport);
     }
 
-    public bool TryAddClientConnection(ClientConnectionContext connection)
+    public bool TryAddClientConnection(IClientConnection connection)
     {
         return _connections.TryAdd(connection.ConnectionId, connection);
     }
 
-    public bool TryRemoveClientConnection(string connectionId, out ClientConnectionContext connection)
+    public bool TryRemoveClientConnection(string connectionId, out IClientConnection connection)
     {
         connection = null;
         return CurrentTransports.TryRemove(connectionId, out _);
     }
 
-    public bool TryGetClientConnection(string connectionId, out ClientConnectionContext connection)
+    public bool TryGetClientConnection(string connectionId, out IClientConnection connection)
     {
         if (_serviceConnection != null)
         {
@@ -69,8 +60,7 @@ internal sealed class TestClientConnectionManager : IClientConnectionManager
 
     public Task WaitForClientConnectAsync(string connectionId)
     {
-        var tcs = _waitForConnectionOpen.GetOrAdd(connectionId, i => new TaskCompletionSource<ConnectionContext>(TaskCreationOptions.RunContinuationsAsynchronously));
-
+        var tcs = _waitForConnectionOpen.GetOrAdd(connectionId, i => new TaskCompletionSource<IClientConnection>(TaskCreationOptions.RunContinuationsAsynchronously));
         return tcs.Task;
     }
 }
