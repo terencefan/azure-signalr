@@ -84,11 +84,11 @@ namespace Microsoft.Azure.SignalR.Tests
 
         private sealed class TestClientConnectionManager : IClientConnectionManager
         {
-            public IReadOnlyDictionary<string, ClientConnectionContext> ClientConnections => throw new NotImplementedException();
-
             public int CompleteIndex = -1;
 
             private readonly StrongBox<int> _index;
+
+            public IReadOnlyDictionary<string, ClientConnectionContext> ClientConnections => throw new NotImplementedException();
 
             public TestClientConnectionManager(StrongBox<int> index)
             {
@@ -119,10 +119,11 @@ namespace Microsoft.Azure.SignalR.Tests
 
         private sealed class TestServiceConnectionManager<THub> : IServiceConnectionManager<THub> where THub : Hub
         {
-            private readonly StrongBox<int> _index;
-
             public int OfflineIndex = -1;
+
             public int StopIndex = -1;
+
+            private readonly StrongBox<int> _index;
 
             public TestServiceConnectionManager(StrongBox<int> index)
             {
@@ -161,6 +162,5 @@ namespace Microsoft.Azure.SignalR.Tests
                 throw new NotImplementedException();
             }
         }
-
     }
 }

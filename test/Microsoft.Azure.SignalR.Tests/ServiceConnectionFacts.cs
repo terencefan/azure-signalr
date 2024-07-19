@@ -24,8 +24,9 @@ namespace Microsoft.Azure.SignalR.Tests
 {
     public class ServiceConnectionFacts
     {
-        private static readonly ServiceProtocol Protocol = new ServiceProtocol();
         private const int DefaultTimeoutInMilliSeconds = 1000;
+
+        private static readonly ServiceProtocol Protocol = new ServiceProtocol();
 
         [Theory]
         [InlineData(true)]
@@ -371,7 +372,6 @@ namespace Microsoft.Azure.SignalR.Tests
 
             var serverTask = proxy.WaitForServerConnectionAsync(1);
             _ = proxy.StartAsync();
-
 
             await Task.Delay(10 * 1000);
             // No server connection will be connected

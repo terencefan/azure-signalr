@@ -19,18 +19,6 @@ namespace Microsoft.Azure.SignalR.AspNet.Tests
     {
         private readonly ClientConnectionManager _clientConnectionManager;
 
-        private ClientConnectionManager CreateClientConnectionManager()
-        {
-            var hubConfig = new HubConfiguration
-            {
-                Resolver = new DefaultDependencyResolver()
-            };
-            var transport = new AzureTransportManager(hubConfig.Resolver);
-            hubConfig.Resolver.Register(typeof(ITransportManager), () => transport);
-
-            return new ClientConnectionManager(hubConfig, null);
-        }
-
         public ClientConnectionManagerTests()
         {
             _clientConnectionManager = CreateClientConnectionManager();
@@ -111,6 +99,18 @@ namespace Microsoft.Azure.SignalR.AspNet.Tests
             }
 
             return type;
+        }
+
+        private ClientConnectionManager CreateClientConnectionManager()
+        {
+            var hubConfig = new HubConfiguration
+            {
+                Resolver = new DefaultDependencyResolver()
+            };
+            var transport = new AzureTransportManager(hubConfig.Resolver);
+            hubConfig.Resolver.Register(typeof(ITransportManager), () => transport);
+
+            return new ClientConnectionManager(hubConfig, null);
         }
     }
 }

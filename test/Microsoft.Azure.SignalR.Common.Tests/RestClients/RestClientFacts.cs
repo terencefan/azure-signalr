@@ -29,6 +29,7 @@ namespace Microsoft.Azure.SignalR.Common.Tests.RestClients
             var httpRequestException = Assert.IsType<HttpRequestException>(exception.InnerException);
             Assert.Equal(HttpStatusCode.InsufficientStorage, httpRequestException.StatusCode);
         }
+
 #endif
     }
 }

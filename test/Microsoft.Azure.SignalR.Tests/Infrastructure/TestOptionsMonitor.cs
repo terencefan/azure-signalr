@@ -13,6 +13,8 @@ namespace Microsoft.Azure.SignalR.Tests
     {
         private readonly IOptionsMonitor<ServiceOptions> _monitor;
 
+        public ServiceOptions CurrentValue => _monitor.CurrentValue;
+
         public TestOptionsMonitor()
         {
             var config = new ConfigurationBuilder().Build();
@@ -26,8 +28,6 @@ namespace Microsoft.Azure.SignalR.Tests
                 .BuildServiceProvider();
             _monitor = serviceProvider.GetRequiredService<IOptionsMonitor<ServiceOptions>>();
         }
-
-        public ServiceOptions CurrentValue => _monitor.CurrentValue;
 
         public ServiceOptions Get(string name) => _monitor.Get(name);
 

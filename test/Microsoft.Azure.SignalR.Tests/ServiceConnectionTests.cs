@@ -512,7 +512,7 @@ namespace Microsoft.Azure.SignalR.Tests
                                                        null,
                                                        null,
                                                        new DefaultClientInvocationManager(),
-                                                      
+
                                                        new DefaultHubProtocolResolver(new[] { hubProtocol }, NullLogger<DefaultHubProtocolResolver>.Instance),
                                                        closeTimeOutMilliseconds: 500);
 
@@ -601,7 +601,7 @@ namespace Microsoft.Azure.SignalR.Tests
                                                        null,
                                                        null,
                                                        new DefaultClientInvocationManager(),
-                                                      
+
                                                        new DefaultHubProtocolResolver(new[] { hubProtocol }, NullLogger<DefaultHubProtocolResolver>.Instance),
                                                        closeTimeOutMilliseconds: 500);
 
@@ -890,6 +890,7 @@ namespace Microsoft.Azure.SignalR.Tests
         private sealed class LastWillConnectionHandler : ConnectionHandler
         {
             private readonly IHubProtocol _hubProtocol;
+
             private readonly string _lastWill;
 
             public LastWillConnectionHandler(IHubProtocol hubProtocol, string lastWill)

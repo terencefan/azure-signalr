@@ -156,7 +156,7 @@ namespace Microsoft.Azure.SignalR.AspNet.Tests
         [Fact]
         public async Task ServiceConnectionWithErrorConnectHub()
         {
-            using (StartVerifiableLog(out var loggerFactory, LogLevel.Warning, expectedErrors: c=>true, logChecker:
+            using (StartVerifiableLog(out var loggerFactory, LogLevel.Warning, expectedErrors: c => true, logChecker:
                 logs =>
                 {
                     Assert.Equal(2, logs.Count);
@@ -217,7 +217,7 @@ namespace Microsoft.Azure.SignalR.AspNet.Tests
                 var ccm = new ClientConnectionManager(hubConfig, loggerFactory);
                 hubConfig.Resolver.Register(typeof(IClientConnectionManager), () => ccm);
                 DispatcherHelper.PrepareAndGetDispatcher(new TestAppBuilder(), hubConfig,
-                    new ServiceOptions {ConnectionString = ConnectionString}, appName, loggerFactory);
+                    new ServiceOptions { ConnectionString = ConnectionString }, appName, loggerFactory);
                 using (var proxy = new TestServiceConnectionProxy(ccm, loggerFactory: loggerFactory))
                 {
                     // start the server connection
@@ -570,7 +570,7 @@ namespace Microsoft.Azure.SignalR.AspNet.Tests
                         Messages = new[] { "offline", instanceId1 }
                     });
 
-                    // Validate client1 disconnect 
+                    // Validate client1 disconnect
                     connectMessage = (await connectTask) as GroupBroadcastDataMessage;
                     Assert.NotNull(connectMessage);
                     Assert.Equal($"hg-{hub}.note", connectMessage.GroupName);
@@ -588,7 +588,9 @@ namespace Microsoft.Azure.SignalR.AspNet.Tests
         private sealed class HubResponseItem
         {
             public string H { get; set; }
+
             public string M { get; set; }
+
             public List<string> A { get; set; }
         }
     }

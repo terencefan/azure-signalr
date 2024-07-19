@@ -24,7 +24,20 @@ namespace Microsoft.Azure.SignalR.Tests
     internal class ServiceConnectionProxy : IClientConnectionManager, IClientConnectionFactory, IServiceConnectionFactory
     {
         private static readonly IServiceProtocol SharedServiceProtocol = new ServiceProtocol();
+
         private readonly PipeOptions _clientPipeOptions;
+
+        private readonly ConcurrentDictionary<string, TaskCompletionSource<ConnectionContext>> _waitForConnectionOpen = new ConcurrentDictionary<string, TaskCompletionSource<ConnectionContext>>();
+
+        private readonly ConcurrentDictionary<string, TaskCompletionSource<object>> _waitForConnectionClose = new ConcurrentDictionary<string, TaskCompletionSource<object>>();
+
+        private readonly ConcurrentDictionary<Type, TaskCompletionSource<ServiceMessage>> _waitForApplicationMessage = new ConcurrentDictionary<Type, TaskCompletionSource<ServiceMessage>>();
+
+        private readonly ConcurrentDictionary<int, TaskCompletionSource<ConnectionContext>> _waitForServerConnection = new ConcurrentDictionary<int, TaskCompletionSource<ConnectionContext>>();
+
+        private readonly ConcurrentDictionary<Type, Channel<ServiceMessage>> _applicationMessages = new();
+
+        private int _connectedServerConnectionCount;
 
         public TestConnectionFactory ConnectionFactory { get; }
 
@@ -51,15 +64,12 @@ namespace Microsoft.Azure.SignalR.Tests
 
         public bool AllowStatefulReconnects { get; }
 
-        private readonly ConcurrentDictionary<string, TaskCompletionSource<ConnectionContext>> _waitForConnectionOpen = new ConcurrentDictionary<string, TaskCompletionSource<ConnectionContext>>();
-        private readonly ConcurrentDictionary<string, TaskCompletionSource<object>> _waitForConnectionClose = new ConcurrentDictionary<string, TaskCompletionSource<object>>();
-        private readonly ConcurrentDictionary<Type, TaskCompletionSource<ServiceMessage>> _waitForApplicationMessage = new ConcurrentDictionary<Type, TaskCompletionSource<ServiceMessage>>();
-        private readonly ConcurrentDictionary<int, TaskCompletionSource<ConnectionContext>> _waitForServerConnection = new ConcurrentDictionary<int, TaskCompletionSource<ConnectionContext>>();
-        private int _connectedServerConnectionCount;
-        private readonly ConcurrentDictionary<Type, Channel<ServiceMessage>> _applicationMessages = new();
+        public bool NewConnectionsCreationPaused { get; set; }
+
+        public Channel<ServiceMessage> ApplicationMessages { get; } = Channel.CreateUnbounded<ServiceMessage>();
 
         public ServiceConnectionProxy(
-            ConnectionDelegate callback = null,
+                            ConnectionDelegate callback = null,
             PipeOptions clientPipeOptions = null,
             Func<Func<TestConnection, Task>, TestConnectionFactory> connectionFactoryCallback = null,
             int connectionCount = 1,
@@ -67,7 +77,7 @@ namespace Microsoft.Azure.SignalR.Tests
         {
             ConnectionFactory = connectionFactoryCallback?.Invoke(ConnectionFactoryCallbackAsync) ?? new TestConnectionFactory(ConnectionFactoryCallbackAsync);
             ClientConnectionManager = new ClientConnectionManager();
-            
+
             ClientInvocationManager = new DefaultClientInvocationManager();
             _clientPipeOptions = clientPipeOptions;
             ConnectionDelegateCallback = callback ?? OnConnectionAsync;
@@ -78,8 +88,8 @@ namespace Microsoft.Azure.SignalR.Tests
 
             // these two lines should be located in the end of this constructor.
             ServiceConnectionContainer = new StrongServiceConnectionContainer(this, connectionCount, null, new TestHubServiceEndpoint(), NullLogger.Instance);
-            ServiceMessageHandler = (StrongServiceConnectionContainer) ServiceConnectionContainer;
-            HubProtocolResolver = new DefaultHubProtocolResolver(new[] { new JsonHubProtocol() }, NullLogger< DefaultHubProtocolResolver>.Instance);
+            ServiceMessageHandler = (StrongServiceConnectionContainer)ServiceConnectionContainer;
+            HubProtocolResolver = new DefaultHubProtocolResolver(new[] { new JsonHubProtocol() }, NullLogger<DefaultHubProtocolResolver>.Instance);
         }
 
         public IServiceConnection Create(HubServiceEndpoint endpoint,
@@ -106,34 +116,6 @@ namespace Microsoft.Azure.SignalR.Tests
                 allowStatefulReconnects: AllowStatefulReconnects);
             ServiceConnections.TryAdd(connectionId, connection);
             return connection;
-        }
-
-        public bool NewConnectionsCreationPaused { get; set; }
-
-        private async Task ConnectionFactoryCallbackAsync(TestConnection connection)
-        {
-            while (NewConnectionsCreationPaused)
-            {
-                await Task.Delay(10);
-            }
-            ConnectionContexts.TryAdd(connection.ConnectionId, connection);
-            // Start a process for each server connection
-            _ = StartProcessApplicationMessagesAsync(connection);
-        }
-
-        private async Task StartProcessApplicationMessagesAsync(TestConnection connection)
-        {
-            await ServiceConnections[connection.ConnectionId].ConnectionInitializedTask;
-
-            if (ServiceConnections[connection.ConnectionId].Status == ServiceConnectionStatus.Connected)
-            {
-                Interlocked.Increment(ref _connectedServerConnectionCount);
-                if (_waitForServerConnection.TryGetValue(_connectedServerConnectionCount, out var tcs))
-                {
-                    tcs.TrySetResult(connection);
-                }
-                await ProcessApplicationMessagesAsync(connection.Application.Input);
-            } 
         }
 
         public Task StartAsync()
@@ -248,20 +230,9 @@ namespace Microsoft.Azure.SignalR.Tests
             return _waitForApplicationMessage.GetOrAdd(type, key => new TaskCompletionSource<ServiceMessage>()).Task;
         }
 
-        public Channel<ServiceMessage> ApplicationMessages { get; } = Channel.CreateUnbounded<ServiceMessage>();
-
         public Task<ConnectionContext> WaitForServerConnectionAsync(int count)
         {
             return _waitForServerConnection.GetOrAdd(count, key => new TaskCompletionSource<ConnectionContext>()).Task;
-        }
-
-        private Task OnConnectionAsync(ConnectionContext connection)
-        {
-            var tcs = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
-
-            connection.ConnectionClosed.Register(() => tcs.TrySetResult(null));
-
-            return tcs.Task;
         }
 
         public bool TryAddClientConnection(ClientConnectionContext connection)
@@ -295,6 +266,46 @@ namespace Microsoft.Azure.SignalR.Tests
             return new ClientConnectionContext(message, configureContext, _clientPipeOptions, _clientPipeOptions);
         }
 
+        public Task WhenAllCompleted()
+        {
+            return Task.CompletedTask;
+        }
+
+        private async Task ConnectionFactoryCallbackAsync(TestConnection connection)
+        {
+            while (NewConnectionsCreationPaused)
+            {
+                await Task.Delay(10);
+            }
+            ConnectionContexts.TryAdd(connection.ConnectionId, connection);
+            // Start a process for each server connection
+            _ = StartProcessApplicationMessagesAsync(connection);
+        }
+
+        private async Task StartProcessApplicationMessagesAsync(TestConnection connection)
+        {
+            await ServiceConnections[connection.ConnectionId].ConnectionInitializedTask;
+
+            if (ServiceConnections[connection.ConnectionId].Status == ServiceConnectionStatus.Connected)
+            {
+                Interlocked.Increment(ref _connectedServerConnectionCount);
+                if (_waitForServerConnection.TryGetValue(_connectedServerConnectionCount, out var tcs))
+                {
+                    tcs.TrySetResult(connection);
+                }
+                await ProcessApplicationMessagesAsync(connection.Application.Input);
+            }
+        }
+
+        private Task OnConnectionAsync(ConnectionContext connection)
+        {
+            var tcs = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
+
+            connection.ConnectionClosed.Register(() => tcs.TrySetResult(null));
+
+            return tcs.Task;
+        }
+
         private void AddApplicationMessage(Type type, ServiceMessage message)
         {
             if (_waitForApplicationMessage.TryRemove(type, out var tcs))
@@ -302,11 +313,6 @@ namespace Microsoft.Azure.SignalR.Tests
                 tcs.TrySetResult(message);
             }
             ApplicationMessages.Writer.TryWrite(message);
-        }
-
-        public Task WhenAllCompleted()
-        {
-            return Task.CompletedTask;
         }
     }
 }

@@ -17,7 +17,9 @@ namespace Microsoft.Azure.SignalR.AspNet.Tests
     internal static class SignalRMessageUtility
     {
         private static readonly ServiceProtocol DefaultServiceProtocol = new ServiceProtocol();
+
         private static readonly JsonSerializer DefaultJsonSerializer = new JsonSerializer();
+
         private static readonly MemoryPool DefaultPool = new MemoryPool();
 
         public static ReadOnlyMemory<byte> GenerateSingleFrameBuffer(this ReadOnlyMemory<byte> inner)
@@ -85,7 +87,6 @@ namespace Microsoft.Azure.SignalR.AspNet.Tests
         {
             using (var writer = new MemoryPoolTextWriter(DefaultPool))
             {
-
                 var selfSerializer = value as IJsonWritable;
 
                 if (selfSerializer != null)
@@ -112,6 +113,7 @@ namespace Microsoft.Azure.SignalR.AspNet.Tests
         private sealed class Response<T>
         {
             public string C { get; set; }
+
             public List<T> M { get; set; }
         }
     }

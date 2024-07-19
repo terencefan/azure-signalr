@@ -8,11 +8,6 @@ namespace Microsoft.Azure.SignalR.Common
 {
     public class AccessKeySynchronizerFacts
     {
-        private static AccessKeySynchronizer GetInstanceForTest()
-        {
-            return new AccessKeySynchronizer(NullLoggerFactory.Instance, false);
-        }
-
         [Fact]
         public void AddAndRemoveServiceEndpointsTest()
         {
@@ -56,6 +51,11 @@ namespace Microsoft.Azure.SignalR.Common
 
             synchronizer.UpdateServiceEndpoints(new List<ServiceEndpoint>() { });
             Assert.Empty(synchronizer.AccessKeyForMicrosoftEntraList);
+        }
+
+        private static AccessKeySynchronizer GetInstanceForTest()
+        {
+            return new AccessKeySynchronizer(NullLoggerFactory.Instance, false);
         }
     }
 }

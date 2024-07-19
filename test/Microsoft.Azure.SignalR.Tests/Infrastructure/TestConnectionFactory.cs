@@ -12,11 +12,13 @@ namespace Microsoft.Azure.SignalR.Tests
 {
     internal class TestConnectionFactory : IConnectionFactory
     {
-        private readonly Func<TestConnection, Task> _connectCallback;
-
         public IList<TestConnection> Connections = new List<TestConnection>();
 
+        private readonly Func<TestConnection, Task> _connectCallback;
+
         public List<DateTime> Times { get; } = new List<DateTime>();
+
+        public HandshakeRequestMessage HandshakeRequest { get; set; }
 
         public TestConnectionFactory()
         {
@@ -27,8 +29,6 @@ namespace Microsoft.Azure.SignalR.Tests
         {
             _connectCallback = connectCallback;
         }
-
-        public HandshakeRequestMessage HandshakeRequest { get; set; }
 
         public async Task<ConnectionContext> ConnectAsync(HubServiceEndpoint endpoint,
                                                           TransferFormat transferFormat,
@@ -65,11 +65,6 @@ namespace Microsoft.Azure.SignalR.Tests
             return Task.CompletedTask;
         }
 
-        private async Task HandshakeAsync(TestConnection connection)
-        {
-            await DoHandshakeAsync(connection);
-        }
-
         /// <summary>
         /// Allow sub-class to override the handshake behavior
         /// </summary>
@@ -85,6 +80,11 @@ namespace Microsoft.Azure.SignalR.Tests
         protected virtual Task AfterConnectedAsync(TestConnection connection)
         {
             return Task.CompletedTask;
+        }
+
+        private async Task HandshakeAsync(TestConnection connection)
+        {
+            await DoHandshakeAsync(connection);
         }
     }
 }

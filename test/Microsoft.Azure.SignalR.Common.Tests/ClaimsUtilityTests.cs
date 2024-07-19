@@ -12,6 +12,7 @@ namespace Microsoft.Azure.SignalR.Common.Tests
     public class ClaimsUtilityTests
     {
         private static readonly Claim[] JwtAuthenticatedClaims = new Claim[] { new Claim("dummy", "dummy"), new Claim("name", "name"), new Claim("role", "admin"), new Claim("aud", "aud") };
+
         private static readonly (ClaimsIdentity identity, string userId, Func<IEnumerable<Claim>> provider, string expectedAuthenticationType, int expectedClaimsCount)[] _claimsParameters =
         {
             (new ClaimsIdentity(), null, null, null, 0),

@@ -14,7 +14,9 @@ namespace Microsoft.AspNetCore.SignalR.Internal
     internal class DefaultHubProtocolResolver : IHubProtocolResolver
     {
         private readonly ILogger<DefaultHubProtocolResolver> _logger;
+
         private readonly List<IHubProtocol> _hubProtocols;
+
         private readonly Dictionary<string, IHubProtocol> _availableProtocols;
 
         public IReadOnlyList<IHubProtocol> AllProtocols => _hubProtocols;

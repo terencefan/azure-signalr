@@ -27,18 +27,133 @@ namespace Microsoft.Azure.SignalR.Tests
 {
     public class TestEndpointServiceConnectionContainerTests : VerifiableLoggedTest
     {
+        public static IEnumerable<object[]> TestReloadEndpointsData = new object[][]
+        {
+            // no change
+            new object[]
+            {
+                new ServiceEndpoint[]
+                {
+                    new ServiceEndpoint("Endpoint=http://url1;AccessKey=ABCDEFG", EndpointType.Primary, "1"),
+                    new ServiceEndpoint("Endpoint=http://url2;AccessKey=ABCDEFG", EndpointType.Primary, "2")
+                },
+                new ServiceEndpoint[]
+                {
+                    new ServiceEndpoint("Endpoint=http://url1;AccessKey=ABCDEFG", EndpointType.Primary, "1"),
+                    new ServiceEndpoint("Endpoint=http://url2;AccessKey=ABCDEFG", EndpointType.Primary, "2")
+                }
+            },
+            // add
+            new object[]
+            {
+                new ServiceEndpoint[]
+                {
+                    new ServiceEndpoint("Endpoint=http://url1;AccessKey=ABCDEFG", EndpointType.Primary, "1")
+                },
+                new ServiceEndpoint[]
+                {
+                    new ServiceEndpoint("Endpoint=http://url1;AccessKey=ABCDEFG", EndpointType.Primary, "1"),
+                    new ServiceEndpoint("Endpoint=http://url2;AccessKey=ABCDEFG", EndpointType.Primary, "2")
+                }
+            },
+            // remove
+            new object[]
+            {
+                new ServiceEndpoint[]
+                {
+                    new ServiceEndpoint("Endpoint=http://url1;AccessKey=ABCDEFG", EndpointType.Primary, "1"),
+                    new ServiceEndpoint("Endpoint=http://url2;AccessKey=ABCDEFG", EndpointType.Primary, "2")
+                },
+                new ServiceEndpoint[]
+                {
+                    new ServiceEndpoint("Endpoint=http://url1;AccessKey=ABCDEFG", EndpointType.Primary, "1")
+                }
+            },
+            // rename
+            new object[]
+            {
+                new ServiceEndpoint[]
+                {
+                    new ServiceEndpoint("Endpoint=http://url1;AccessKey=ABCDEFG", EndpointType.Primary, "1"),
+                    new ServiceEndpoint("Endpoint=http://url2;AccessKey=ABCDEFG", EndpointType.Primary, "2")
+                },
+                new ServiceEndpoint[]
+                {
+                    new ServiceEndpoint("Endpoint=http://url1;AccessKey=ABCDEFG", EndpointType.Primary, "22"),
+                    new ServiceEndpoint("Endpoint=http://url2;AccessKey=ABCDEFG", EndpointType.Primary, "11")
+                }
+            },
+            // type
+            new object[]
+            {
+                new ServiceEndpoint[]
+                {
+                    new ServiceEndpoint("Endpoint=http://url1;AccessKey=ABCDEFG", EndpointType.Primary, "1"),
+                    new ServiceEndpoint("Endpoint=http://url2;AccessKey=ABCDEFG", EndpointType.Secondary, "2")
+                },
+                new ServiceEndpoint[]
+                {
+                    new ServiceEndpoint("Endpoint=http://url1;AccessKey=ABCDEFG", EndpointType.Secondary, "1"),
+                    new ServiceEndpoint("Endpoint=http://url2;AccessKey=ABCDEFG", EndpointType.Primary, "2")
+                }
+            },
+            // client endpoint
+            new object[]
+            {
+                new ServiceEndpoint[]
+                {
+                    new ServiceEndpoint("Endpoint=http://url1;AccessKey=ABCDEFG", EndpointType.Primary, "1"),
+                    new ServiceEndpoint("Endpoint=http://url2;AccessKey=ABCDEFG", EndpointType.Primary, "2")
+                },
+                new ServiceEndpoint[]
+                {
+                    new ServiceEndpoint("Endpoint=http://url2;AccessKey=ABCDEFG", EndpointType.Primary, "2"),
+                    new ServiceEndpoint("Endpoint=http://url1;AccessKey=ABCDEFG;ClientEndpoint=https://ce.com", EndpointType.Primary, "1")
+                }
+            },
+            // server endpoint
+            new object[]
+            {
+                new ServiceEndpoint[]
+                {
+                    new ServiceEndpoint("Endpoint=http://url1;AccessKey=ABCDEFG", EndpointType.Primary, "1"),
+                    new ServiceEndpoint("Endpoint=http://url2;AccessKey=ABCDEFG", EndpointType.Secondary, "2")
+                },
+                new ServiceEndpoint[]
+                {
+                    new ServiceEndpoint("Endpoint=http://url2;AccessKey=ABCDEFG", EndpointType.Secondary, "2"),
+                    new ServiceEndpoint("Endpoint=http://url1;AccessKey=ABCDEFG;ServerEndpoint=https://se.com/", EndpointType.Primary, "1")
+                }
+            }
+        };
+
         private const string ConnectionStringFormatter = "Endpoint={0};AccessKey=ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789;";
+
         private const string Url1 = "http://url1.com/";
+
         private const string Url2 = "https://url2.com/";
+
         private const string Url3 = "http://url3.com/";
-        private readonly string ConnectionString1 = string.Format(ConnectionStringFormatter, Url1);
-        private readonly string ConnectionString2 = string.Format(ConnectionStringFormatter, Url2);
-        private readonly string ConnectionString3 = string.Format(ConnectionStringFormatter, Url3);
-        private static readonly JoinGroupWithAckMessage DefaultGroupMessage = new JoinGroupWithAckMessage("a", "a", -1);
+
         private const int TimeoutSec = 10000;
+
+        private static readonly JoinGroupWithAckMessage DefaultGroupMessage = new JoinGroupWithAckMessage("a", "a", -1);
+
+        private readonly string ConnectionString1 = string.Format(ConnectionStringFormatter, Url1);
+
+        private readonly string ConnectionString2 = string.Format(ConnectionStringFormatter, Url2);
+
+        private readonly string ConnectionString3 = string.Format(ConnectionStringFormatter, Url3);
 
         public TestEndpointServiceConnectionContainerTests(ITestOutputHelper output) : base(output)
         {
+        }
+
+        private enum EndpointStatus
+        {
+            Online,
+
+            Offline,
         }
 
         [Fact(Skip = "Enable when custom interval is supported")]
@@ -786,31 +901,6 @@ namespace Microsoft.Azure.SignalR.Tests
             }
 
             await Assert.ThrowsAnyAsync<OperationCanceledException>(async () => await task).OrTimeout();
-        }
-
-        [Theory]
-        [InlineData(GracefulShutdownMode.Off)]
-        [InlineData(GracefulShutdownMode.WaitForClientsClose)]
-        [InlineData(GracefulShutdownMode.MigrateClients)]
-        internal async Task TestSingleEndpointOffline(GracefulShutdownMode mode)
-        {
-            var manager = new TestServiceEndpointManager(
-                new ServiceEndpoint(ConnectionString1)
-            );
-            await TestEndpointOfflineInner(manager, new TestEndpointRouter(), mode);
-        }
-
-        [Theory]
-        [InlineData(GracefulShutdownMode.Off)]
-        [InlineData(GracefulShutdownMode.WaitForClientsClose)]
-        [InlineData(GracefulShutdownMode.MigrateClients)]
-        internal async Task TestMultiEndpointOffline(GracefulShutdownMode mode)
-        {
-            var manager = new TestServiceEndpointManager(
-                new ServiceEndpoint(ConnectionString1),
-                new ServiceEndpoint(ConnectionString2)
-            );
-            await TestEndpointOfflineInner(manager, new TestEndpointRouter(), mode);
         }
 
         [Fact]
@@ -1578,7 +1668,6 @@ namespace Microsoft.Azure.SignalR.Tests
                 var containers = multiContainer.GetTestOnlineContainers();
                 try
                 {
-
                     await Task.Run(async () =>
                     {
                         _ = multiContainer.StartAsync();
@@ -1628,7 +1717,6 @@ namespace Microsoft.Azure.SignalR.Tests
 
                         _ = await ccm.WaitForClientConnectionAsync("client2").OrTimeout();
                         _ = await ccm.WaitForClientConnectionAsync("client22").OrTimeout();
-
 
                         // server receives ping message 1
                         await containers[1].BaseHandlePingAsync(
@@ -1718,105 +1806,30 @@ namespace Microsoft.Azure.SignalR.Tests
             Assert.Equal(c2, hubEndpoints[1].EndpointMetrics.ClientConnectionCount);
         }
 
-        public static IEnumerable<object[]> TestReloadEndpointsData = new object[][]
+        [Theory]
+        [InlineData(GracefulShutdownMode.Off)]
+        [InlineData(GracefulShutdownMode.WaitForClientsClose)]
+        [InlineData(GracefulShutdownMode.MigrateClients)]
+        internal async Task TestSingleEndpointOffline(GracefulShutdownMode mode)
         {
-            // no change
-            new object[]
-            {
-                new ServiceEndpoint[]
-                {
-                    new ServiceEndpoint("Endpoint=http://url1;AccessKey=ABCDEFG", EndpointType.Primary, "1"),
-                    new ServiceEndpoint("Endpoint=http://url2;AccessKey=ABCDEFG", EndpointType.Primary, "2")
-                },
-                new ServiceEndpoint[]
-                {
-                    new ServiceEndpoint("Endpoint=http://url1;AccessKey=ABCDEFG", EndpointType.Primary, "1"),
-                    new ServiceEndpoint("Endpoint=http://url2;AccessKey=ABCDEFG", EndpointType.Primary, "2")
-                }
-            },
-            // add
-            new object[]
-            {
-                new ServiceEndpoint[]
-                {
-                    new ServiceEndpoint("Endpoint=http://url1;AccessKey=ABCDEFG", EndpointType.Primary, "1")
-                },
-                new ServiceEndpoint[]
-                {
-                    new ServiceEndpoint("Endpoint=http://url1;AccessKey=ABCDEFG", EndpointType.Primary, "1"),
-                    new ServiceEndpoint("Endpoint=http://url2;AccessKey=ABCDEFG", EndpointType.Primary, "2")
-                }
-            },
-            // remove
-            new object[]
-            {
-                new ServiceEndpoint[]
-                {
-                    new ServiceEndpoint("Endpoint=http://url1;AccessKey=ABCDEFG", EndpointType.Primary, "1"),
-                    new ServiceEndpoint("Endpoint=http://url2;AccessKey=ABCDEFG", EndpointType.Primary, "2")
-                },
-                new ServiceEndpoint[]
-                {
-                    new ServiceEndpoint("Endpoint=http://url1;AccessKey=ABCDEFG", EndpointType.Primary, "1")
-                }
-            },
-            // rename
-            new object[]
-            {
-                new ServiceEndpoint[]
-                {
-                    new ServiceEndpoint("Endpoint=http://url1;AccessKey=ABCDEFG", EndpointType.Primary, "1"),
-                    new ServiceEndpoint("Endpoint=http://url2;AccessKey=ABCDEFG", EndpointType.Primary, "2")
-                },
-                new ServiceEndpoint[]
-                {
-                    new ServiceEndpoint("Endpoint=http://url1;AccessKey=ABCDEFG", EndpointType.Primary, "22"),
-                    new ServiceEndpoint("Endpoint=http://url2;AccessKey=ABCDEFG", EndpointType.Primary, "11")
-                }
-            },
-            // type
-            new object[]
-            {
-                new ServiceEndpoint[]
-                {
-                    new ServiceEndpoint("Endpoint=http://url1;AccessKey=ABCDEFG", EndpointType.Primary, "1"),
-                    new ServiceEndpoint("Endpoint=http://url2;AccessKey=ABCDEFG", EndpointType.Secondary, "2")
-                },
-                new ServiceEndpoint[]
-                {
-                    new ServiceEndpoint("Endpoint=http://url1;AccessKey=ABCDEFG", EndpointType.Secondary, "1"),
-                    new ServiceEndpoint("Endpoint=http://url2;AccessKey=ABCDEFG", EndpointType.Primary, "2")
-                }
-            },
-            // client endpoint
-            new object[]
-            {
-                new ServiceEndpoint[]
-                {
-                    new ServiceEndpoint("Endpoint=http://url1;AccessKey=ABCDEFG", EndpointType.Primary, "1"),
-                    new ServiceEndpoint("Endpoint=http://url2;AccessKey=ABCDEFG", EndpointType.Primary, "2")
-                },
-                new ServiceEndpoint[]
-                {
-                    new ServiceEndpoint("Endpoint=http://url2;AccessKey=ABCDEFG", EndpointType.Primary, "2"),
-                    new ServiceEndpoint("Endpoint=http://url1;AccessKey=ABCDEFG;ClientEndpoint=https://ce.com", EndpointType.Primary, "1")
-                }
-            },
-            // server endpoint
-            new object[]
-            {
-                new ServiceEndpoint[]
-                {
-                    new ServiceEndpoint("Endpoint=http://url1;AccessKey=ABCDEFG", EndpointType.Primary, "1"),
-                    new ServiceEndpoint("Endpoint=http://url2;AccessKey=ABCDEFG", EndpointType.Secondary, "2")
-                },
-                new ServiceEndpoint[]
-                {
-                    new ServiceEndpoint("Endpoint=http://url2;AccessKey=ABCDEFG", EndpointType.Secondary, "2"),
-                    new ServiceEndpoint("Endpoint=http://url1;AccessKey=ABCDEFG;ServerEndpoint=https://se.com/", EndpointType.Primary, "1")
-                }
-            }
-        };
+            var manager = new TestServiceEndpointManager(
+                new ServiceEndpoint(ConnectionString1)
+            );
+            await TestEndpointOfflineInner(manager, new TestEndpointRouter(), mode);
+        }
+
+        [Theory]
+        [InlineData(GracefulShutdownMode.Off)]
+        [InlineData(GracefulShutdownMode.WaitForClientsClose)]
+        [InlineData(GracefulShutdownMode.MigrateClients)]
+        internal async Task TestMultiEndpointOffline(GracefulShutdownMode mode)
+        {
+            var manager = new TestServiceEndpointManager(
+                new ServiceEndpoint(ConnectionString1),
+                new ServiceEndpoint(ConnectionString2)
+            );
+            await TestEndpointOfflineInner(manager, new TestEndpointRouter(), mode);
+        }
 
         private (PingConnectionHandler, ConnectionDelegate) GetConnectionDelegate()
         {
@@ -1855,7 +1868,6 @@ namespace Microsoft.Azure.SignalR.Tests
             {
                 Assert.True(c.IsOffline);
             }
-
         }
 
         private TestMultiEndpointServiceConnectionContainer CreateMultiEndpointConnection(EndpointStatus[] status, TaskCompletionSource<object> writeTcs, ILoggerFactory loggerFactory)
@@ -1884,16 +1896,12 @@ namespace Microsoft.Azure.SignalR.Tests
             }, sem, router, loggerFactory);
         }
 
-        private enum EndpointStatus
-        {
-            Online,
-            Offline,
-        }
-
         private sealed class PingConnectionHandler : ConnectionHandler
         {
             public ConcurrentDictionary<string, IList<bool>> Result = new ConcurrentDictionary<string, IList<bool>>();
+
             public CancellationTokenSource Cts { get; } = new CancellationTokenSource();
+
             public PingConnectionHandler()
             {
             }
@@ -1906,6 +1914,7 @@ namespace Microsoft.Azure.SignalR.Tests
                     await Task.Delay(200);
                 }
             }
+
             private async Task ReadMessagesAsync(ConnectionContext connection)
             {
                 while (!Cts.IsCancellationRequested)
@@ -1992,7 +2001,9 @@ namespace Microsoft.Azure.SignalR.Tests
         private class TestEndpointRouter : EndpointRouterDecorator
         {
             private readonly Exception _ex;
+
             private readonly bool _broken;
+
             public TestEndpointRouter(Exception ex = null) : base()
             {
                 _ex = ex;

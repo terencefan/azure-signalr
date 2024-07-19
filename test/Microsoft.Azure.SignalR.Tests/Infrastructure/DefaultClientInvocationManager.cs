@@ -12,20 +12,21 @@ namespace Microsoft.Azure.SignalR
     internal class DefaultClientInvocationManager : IClientInvocationManager
     {
         public ICallerClientResultsManager Caller { get; }
+
         public IRoutedClientResultsManager Router { get; }
 
         public DefaultClientInvocationManager()
         {
             var hubProtocolResolver = new DefaultHubProtocolResolver(
-                    new IHubProtocol[] { 
-                        new JsonHubProtocol(), 
-                        new MessagePackHubProtocol() 
+                    new IHubProtocol[] {
+                        new JsonHubProtocol(),
+                        new MessagePackHubProtocol()
                     },
                     NullLogger<DefaultHubProtocolResolver>.Instance);
             var loggerFactory = new NullLoggerFactory();
             var serviceEndpointManager = new ServiceEndpointManager(
                 new AccessKeySynchronizer(loggerFactory),
-                new TestOptionsMonitor(), 
+                new TestOptionsMonitor(),
                 loggerFactory
             );
             Caller = new CallerClientResultsManager(hubProtocolResolver, serviceEndpointManager, new DefaultEndpointRouter());

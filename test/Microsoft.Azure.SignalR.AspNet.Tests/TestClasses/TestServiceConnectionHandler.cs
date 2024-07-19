@@ -14,7 +14,7 @@ namespace Microsoft.Azure.SignalR.AspNet.Tests
     {
         private readonly ConcurrentDictionary<Type, TaskCompletionSource<ServiceMessage>> _waitForTransportOutputMessage = new ConcurrentDictionary<Type, TaskCompletionSource<ServiceMessage>>();
 
-        public TestServiceConnectionHandler(): this(null, null)
+        public TestServiceConnectionHandler() : this(null, null)
         {
         }
 

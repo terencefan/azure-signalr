@@ -51,7 +51,7 @@ namespace Microsoft.Azure.SignalR.Tests
             var endpointA = GenerateServiceEndpoint(quotaOfScaleUpInstance, 0, 80, "a");
             var endpointB = GenerateServiceEndpoint(100, 0, 70, "b");
             var endpointC = GenerateServiceEndpoint(100, 0, 70, "c");
-            var el = new List<ServiceEndpoint>() {endpointA, endpointB, endpointC};
+            var el = new List<ServiceEndpoint>() { endpointA, endpointB, endpointC };
             context.BenchTest(loops, () =>
             {
                 var ep = drt.GetNegotiateEndpoint(null, el);
@@ -84,7 +84,8 @@ namespace Microsoft.Azure.SignalR.Tests
                 ServerConnectionCount = serverConnectionCount
             };
             return new ServiceEndpoint("Endpoint=https://url;AccessKey=ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789;",
-                EndpointType.Primary, name) { EndpointMetrics = endpointMetrics };
+                EndpointType.Primary, name)
+            { EndpointMetrics = endpointMetrics };
         }
 
         private class RandomContext

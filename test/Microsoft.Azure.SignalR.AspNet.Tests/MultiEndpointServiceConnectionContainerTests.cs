@@ -18,25 +18,17 @@ namespace Microsoft.Azure.SignalR.AspNet.Tests
 {
     public class TestEndpointServiceConnectionContainerTests : VerifiableLoggedTest
     {
-        private sealed class TestMultiEndpointServiceConnectionContainer : MultiEndpointServiceConnectionContainer
-        {
-            public TestMultiEndpointServiceConnectionContainer(string hub,
-                                                          Func<HubServiceEndpoint, IServiceConnectionContainer> generator,
-                                                          IServiceEndpointManager endpoint,
-                                                          IEndpointRouter router,
-                                                          ILoggerFactory loggerFactory
-
-                ) : base(hub, generator, endpoint, router, loggerFactory)
-            {
-            }
-        }
-
         private const string ConnectionStringFormatter = "Endpoint={0};AccessKey=ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789;";
+
         private const string Url1 = "http://url1";
+
         private const string Url2 = "https://url2";
-        private readonly string ConnectionString1 = string.Format(ConnectionStringFormatter, Url1);
-        private readonly string ConnectionString2 = string.Format(ConnectionStringFormatter, Url2);
+
         private static readonly JoinGroupWithAckMessage DefaultGroupMessage = new JoinGroupWithAckMessage("a", "a");
+
+        private readonly string ConnectionString1 = string.Format(ConnectionStringFormatter, Url1);
+
+        private readonly string ConnectionString2 = string.Format(ConnectionStringFormatter, Url2);
 
         public TestEndpointServiceConnectionContainerTests(ITestOutputHelper output) : base(output)
         {
@@ -282,7 +274,6 @@ namespace Microsoft.Azure.SignalR.AspNet.Tests
             _ = container.StartAsync();
             await container.ConnectionInitializedTask.OrTimeout();
 
-
             await Assert.ThrowsAsync<InvalidOperationException>(
                 () => container.WriteAsync(DefaultGroupMessage)
                 );
@@ -490,6 +481,19 @@ namespace Microsoft.Azure.SignalR.AspNet.Tests
             Assert.Single(endpoints);
 
             Assert.Equal("online", endpoints.First().Name);
+        }
+
+        private sealed class TestMultiEndpointServiceConnectionContainer : MultiEndpointServiceConnectionContainer
+        {
+            public TestMultiEndpointServiceConnectionContainer(string hub,
+                                                          Func<HubServiceEndpoint, IServiceConnectionContainer> generator,
+                                                          IServiceEndpointManager endpoint,
+                                                          IEndpointRouter router,
+                                                          ILoggerFactory loggerFactory
+
+                ) : base(hub, generator, endpoint, router, loggerFactory)
+            {
+            }
         }
 
         private class TestServiceEndpointManager : ServiceEndpointManagerBase

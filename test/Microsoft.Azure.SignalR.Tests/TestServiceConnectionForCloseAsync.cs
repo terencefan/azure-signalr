@@ -13,6 +13,7 @@ namespace Microsoft.Azure.SignalR.Tests
         /**
          * Register an outgoing Task.
          */
+
         protected override Task OnClientConnectedAsync(OpenConnectionMessage openConnectionMessage)
         {
             return Task.CompletedTask;

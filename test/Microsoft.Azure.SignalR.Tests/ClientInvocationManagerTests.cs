@@ -34,28 +34,6 @@ namespace Microsoft.Azure.SignalR
         private static readonly string SuccessCompleteResult = "success-result";
         private static readonly string ErrorCompleteResult = "error-result";
 
-        private static ClientInvocationManager GetTestClientInvocationManager(int endpointCount = 1)
-        {
-            var services = new ServiceCollection();
-            var endpoints = Enumerable.Range(0, endpointCount)
-                .Select(i => new ServiceEndpoint($"Endpoint=https://test{i}connectionstring;AccessKey=1"))
-                .ToArray();
-
-            var config = new ConfigurationBuilder().Build();
-
-            var serviceProvider = services.AddLogging()
-                .AddSignalR().AddAzureSignalR(o => o.Endpoints = endpoints)
-                .Services
-                .AddSingleton<IConfiguration>(config)
-                .BuildServiceProvider();
-
-            var manager = serviceProvider.GetService<IServiceEndpointManager>();
-            var endpointRouter = serviceProvider.GetService<IEndpointRouter>();
-
-            var clientInvocationManager = new ClientInvocationManager(HubProtocolResolver, manager, endpointRouter);
-            return clientInvocationManager;
-        }
-
         [Theory]
         [InlineData(true)]
         [InlineData(false)]
@@ -172,7 +150,6 @@ namespace Microsoft.Azure.SignalR
             Assert.False(clientInvocationManager.Caller.TryGetInvocationReturnType(invocationId, out _));
         }
 
-
         [Theory]
         [InlineData(true, 2)]
         [InlineData(false, 2)]
@@ -278,6 +255,27 @@ namespace Microsoft.Azure.SignalR
             return hubProtocol.GetMessageBytes(message);
         }
 
+        private static ClientInvocationManager GetTestClientInvocationManager(int endpointCount = 1)
+        {
+            var services = new ServiceCollection();
+            var endpoints = Enumerable.Range(0, endpointCount)
+                .Select(i => new ServiceEndpoint($"Endpoint=https://test{i}connectionstring;AccessKey=1"))
+                .ToArray();
+
+            var config = new ConfigurationBuilder().Build();
+
+            var serviceProvider = services.AddLogging()
+                .AddSignalR().AddAzureSignalR(o => o.Endpoints = endpoints)
+                .Services
+                .AddSingleton<IConfiguration>(config)
+                .BuildServiceProvider();
+
+            var manager = serviceProvider.GetService<IServiceEndpointManager>();
+            var endpointRouter = serviceProvider.GetService<IEndpointRouter>();
+
+            var clientInvocationManager = new ClientInvocationManager(HubProtocolResolver, manager, endpointRouter);
+            return clientInvocationManager;
+        }
     }
 }
 #endif

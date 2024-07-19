@@ -28,7 +28,7 @@ namespace Microsoft.Azure.SignalR.Tests
                 // send to connections
                 MessageLog.StartToSendMessageToConnection(logger, new ConnectionDataMessage("id1", null, tracingId: 123UL));
                 Assert.Equal(Format(MessageLog.StartToSendMessageToConnectionTemplate, 123UL, "id1"), logger.LogStr);
-                
+
                 MessageLog.StartToSendMessageToConnections(logger, new MultiConnectionDataMessage(new[] { "id1", "id2" }, null, tracingId: 123UL));
                 Assert.Equal(Format(MessageLog.StartToSendMessageToConnectionsTemplate, 123UL, 2, "id1, id2"), logger.LogStr);
 
@@ -41,10 +41,10 @@ namespace Microsoft.Azure.SignalR.Tests
 
                 MessageLog.SucceededToSendMessage(logger, new UserDataMessage("user", null, tracingId: 123UL));
                 Assert.Equal(Format(MessageLog.SucceededToSendMessageTemplate, 123UL), logger.LogStr);
-                
+
                 MessageLog.ReceiveMessageFromService(logger, new ConnectionDataMessage("c", null, tracingId: 123UL));
                 Assert.Equal(Format(MessageLog.ReceivedMessageFromClientConnectionTemplate, 123UL, "c"), logger.LogStr);
-                
+
                 MessageLog.StartToSendMessageToUsers(logger, new MultiUserDataMessage(new[] { "u1", "u2" }, null, tracingId: 123UL));
                 Assert.Equal(Format(MessageLog.StartToSendMessageToUsersTemplate, 123UL, 2, "u1, u2"), logger.LogStr);
 
@@ -64,23 +64,23 @@ namespace Microsoft.Azure.SignalR.Tests
 
                 MessageLog.StartToRemoveConnectionFromGroup(logger, new LeaveGroupWithAckMessage("c", "g", tracingId: 123UL));
                 Assert.Equal(Format(MessageLog.StartToRemoveConnectionFromGroupTemplate, 123UL, "c", "g"), logger.LogStr);
-                
-                MessageLog.StartToCloseConnection(logger, new CloseConnectionMessage("c", "e") { TracingId = 123UL});
+
+                MessageLog.StartToCloseConnection(logger, new CloseConnectionMessage("c", "e") { TracingId = 123UL });
                 Assert.Equal(Format(MessageLog.StartToSendMessageToCloseConnectionTemplate, 123UL, "c", "e"), logger.LogStr);
-                
+
                 MessageLog.StartToCheckIfConnectionExists(logger, new CheckConnectionExistenceWithAckMessage("c", 12, 123UL));
                 Assert.Equal(Format(MessageLog.StartToSendMessageToCheckConnectionTemplate, 123UL, "c"), logger.LogStr);
-                
+
                 MessageLog.StartToCheckIfUserExists(logger, new CheckUserExistenceWithAckMessage("c", 12, 123UL));
                 Assert.Equal(Format(MessageLog.StartToSendMessageToCheckIfUserExistsTemplate, 123UL, "c"), logger.LogStr);
-                
+
                 MessageLog.StartToCheckIfGroupExists(logger, new CheckGroupExistenceWithAckMessage("c", 12, 123UL));
                 Assert.Equal(Format(MessageLog.StartToSendMessageToCheckIfGroupExistsTemplate, 123UL, "c"), logger.LogStr);
-                
+
                 // user join/leave group
                 MessageLog.StartToAddUserToGroup(logger, new UserJoinGroupMessage("c", "g", tracingId: 123UL));
                 Assert.Equal(Format(MessageLog.StartToAddUserToGroupTemplate, 123UL, "c", "g"), logger.LogStr);
-                
+
                 MessageLog.StartToCheckIfUserInGroup(logger, new CheckUserInGroupWithAckMessage("c", "g", tracingId: 123UL));
                 Assert.Equal(Format(MessageLog.StartToCheckIfUserInGroupTemplate, 123UL, "c", "g"), logger.LogStr);
 

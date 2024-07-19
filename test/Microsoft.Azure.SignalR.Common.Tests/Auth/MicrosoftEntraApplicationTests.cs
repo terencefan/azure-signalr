@@ -17,7 +17,9 @@ namespace Microsoft.Azure.SignalR.Common.Tests.Auth
         private const string IssuerEndpoint = "https://sts.windows.net/";
 
         private const string TestClientId = "";
+
         private const string TestClientSecret = "";
+
         private const string TestTenantId = "";
 
         private static readonly string[] DefaultScopes = new string[] { "https://signalr.azure.com/.default" };

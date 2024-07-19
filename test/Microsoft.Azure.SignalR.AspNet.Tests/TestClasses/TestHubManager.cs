@@ -12,6 +12,7 @@ namespace Microsoft.Azure.SignalR.AspNet.Tests
     internal sealed class TestHubManager : IHubManager
     {
         private readonly string[] _hubs;
+
         public TestHubManager(params string[] hubs)
         {
             _hubs = hubs;

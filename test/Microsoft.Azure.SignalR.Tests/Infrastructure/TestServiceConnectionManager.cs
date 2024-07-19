@@ -13,6 +13,7 @@ namespace Microsoft.Azure.SignalR.Tests
     internal class TestServiceConnectionManager<THub> : IServiceConnectionManager<THub> where THub : Hub
     {
         private readonly ConcurrentDictionary<Type, int> _writeAsyncCallCount = new ConcurrentDictionary<Type, int>();
+
         private readonly ConcurrentDictionary<Type, int> _partitionedWriteAsyncCallCount = new ConcurrentDictionary<Type, int>();
 
         public ServiceMessage ServiceMessage { get; private set; }

@@ -9,13 +9,18 @@ namespace Microsoft.Azure.SignalR.AspNet.Tests
 {
     public class TestTransport : IServiceTransport
     {
+        public long MessageCount = 0;
+
         private readonly TaskCompletionSource<object> _lifetimeTcs = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
 
-        public long MessageCount = 0;
         public Func<string, Task> Received { get; set; }
+
         public Func<Task> Connected { get; set; }
+
         public Func<Task> Reconnected { get; set; }
+
         public Func<bool, Task> Disconnected { get; set; }
+
         public string ConnectionId { get; set; }
 
         public Task<string> GetGroupsToken()

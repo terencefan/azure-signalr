@@ -17,12 +17,12 @@ namespace Microsoft.Azure.SignalR.Tests
 
         public bool MockOffline { get; set; } = false;
 
+        public List<IServiceConnection> Connections { get => ServiceConnections; }
+
         public TestServiceConnectionContainer(List<IServiceConnection> serviceConnections, HubServiceEndpoint endpoint = null, AckHandler ackHandler = null, IServiceConnectionFactory factory = null, ILogger logger = null)
-            : base(factory, 0, endpoint, serviceConnections, ackHandler: ackHandler, logger: logger ?? NullLogger.Instance)
+                    : base(factory, 0, endpoint, serviceConnections, ackHandler: ackHandler, logger: logger ?? NullLogger.Instance)
         {
         }
-
-        public List<IServiceConnection> Connections { get => ServiceConnections; }
 
         public void ShutdownForTest()
         {
@@ -36,7 +36,8 @@ namespace Microsoft.Azure.SignalR.Tests
             {
                 await Task.Delay(100);
                 IsOffline = true;
-            } else
+            }
+            else
             {
                 await base.OfflineAsync(mode);
             }
@@ -50,11 +51,6 @@ namespace Microsoft.Azure.SignalR.Tests
         public Task BaseHandlePingAsync(PingMessage pingMessage)
         {
             return base.HandlePingAsync(pingMessage);
-        }
-
-        protected override Task OnConnectionComplete(IServiceConnection connection)
-        {
-            return Task.CompletedTask;
         }
 
         public Task OnConnectionCompleteForTestShutdown(IServiceConnection connection)
@@ -76,8 +72,13 @@ namespace Microsoft.Azure.SignalR.Tests
 
         public Task MockReceivedStatusPing(bool isActive, int clientCount)
         {
-            var ping = new PingMessage { Messages = new[] { "status", isActive ? "1" : "0" , "clientcount", clientCount.ToString()} };
+            var ping = new PingMessage { Messages = new[] { "status", isActive ? "1" : "0", "clientcount", clientCount.ToString() } };
             return base.HandlePingAsync(ping);
+        }
+
+        protected override Task OnConnectionComplete(IServiceConnection connection)
+        {
+            return Task.CompletedTask;
         }
     }
 }

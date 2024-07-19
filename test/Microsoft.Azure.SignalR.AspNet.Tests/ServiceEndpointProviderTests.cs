@@ -16,9 +16,10 @@ namespace Microsoft.Azure.SignalR.AspNet.Tests
     public class ServiceEndpointProviderTests
     {
         private const string SigningKey = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
-        private static readonly SymmetricSecurityKey SecurityKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(SigningKey));
+
         private const string DefaultConnectionString = "Endpoint=http://localhost;AccessKey=ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789;Port=8080;Version=1.0";
 
+        private static readonly SymmetricSecurityKey SecurityKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(SigningKey));
 
         [Theory]
         [InlineData("Endpoint=http://localhost;AccessKey=ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789;Port=8080;Version=1.0", "http://localhost/aspnetclient")]

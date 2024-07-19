@@ -23,6 +23,18 @@ namespace Microsoft.Azure.SignalR.Common.Tests
 
         private const string DefaultKey = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
 
+        public static IEnumerable<object[]> ServerEndpointTestData
+        {
+            get
+            {
+                yield return new object[] { $"endpoint={HttpEndpoint};authType=aad;serverEndpoint={HttpClientEndpoint}", HttpClientEndpoint };
+                yield return new object[] { $"endpoint={HttpEndpoint};authType=aad;serverEndpoint={HttpClientEndpoint}:80", HttpClientEndpoint + ":80" };
+                yield return new object[] { $"endpoint={HttpEndpoint};authType=aad;serverEndpoint={HttpClientEndpoint}:80/abc", HttpClientEndpoint + ":80/abc" };
+                yield return new object[] { $"endpoint={HttpsEndpoint};authType=aad;serverEndpoint={HttpsClientEndpoint}", HttpsClientEndpoint };
+                yield return new object[] { $"endpoint={HttpsEndpoint};authType=aad;serverEndpoint={HttpsClientEndpoint}:443", HttpsClientEndpoint + ":443" };
+            }
+        }
+
         [Theory]
         [ClassData(typeof(EndpointAndPortTestData))]
         public void TestEndpointAndAudience(string connectionString, string expectedAudience, string expectedEndpoint)
@@ -103,7 +115,6 @@ namespace Microsoft.Azure.SignalR.Common.Tests
             Assert.Equal(serviceEndpoint.Version, cloned.Version);
             Assert.Equal(serviceEndpoint.AccessKey, cloned.AccessKey);
         }
-
 
         [Theory]
         [InlineData("http://localhost", "http://localhost", 80)]
@@ -259,7 +270,7 @@ namespace Microsoft.Azure.SignalR.Common.Tests
                 {
                     new ServiceEndpoint("Endpoint=http://localhost;AccessKey=ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789;Port=8080;Version=1.0"),
                     new ServiceEndpoint(":primary", "Endpoint=http://localhost;AccessKey=OPQRSTUVWXYZ0123456780ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456780"),
-                    false, // ports are different 
+                    false, // ports are different
                 };
                 yield return new object[]
                 {
@@ -352,18 +363,6 @@ namespace Microsoft.Azure.SignalR.Common.Tests
             }
 
             IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
-        }
-
-        public static IEnumerable<object[]> ServerEndpointTestData
-        {
-            get
-            {
-                yield return new object[] { $"endpoint={HttpEndpoint};authType=aad;serverEndpoint={HttpClientEndpoint}", HttpClientEndpoint };
-                yield return new object[] { $"endpoint={HttpEndpoint};authType=aad;serverEndpoint={HttpClientEndpoint}:80", HttpClientEndpoint + ":80" };
-                yield return new object[] { $"endpoint={HttpEndpoint};authType=aad;serverEndpoint={HttpClientEndpoint}:80/abc", HttpClientEndpoint + ":80/abc" };
-                yield return new object[] { $"endpoint={HttpsEndpoint};authType=aad;serverEndpoint={HttpsClientEndpoint}", HttpsClientEndpoint };
-                yield return new object[] { $"endpoint={HttpsEndpoint};authType=aad;serverEndpoint={HttpsClientEndpoint}:443", HttpsClientEndpoint + ":443" };
-            }
         }
     }
 }
