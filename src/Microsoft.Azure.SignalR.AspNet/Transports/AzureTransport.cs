@@ -70,10 +70,10 @@ internal class AzureTransport : IServiceTransport
 
     public Task Send(object value)
     {
-        if (_clientConnectionManager.TryGetClientConnection(ConnectionId, out var connection))
+        if (_clientConnectionManager.TryGetClientConnection(ConnectionId, out var clientConnection))
         {
-            var message = CreateConnectionDataMessage(connection.ConnectionId, value, _serviceProtocol, _serializer, _pool);
-            return connection.ServiceConnection.WriteAsync(message);
+            var message = CreateConnectionDataMessage(ConnectionId, value, _serviceProtocol, _serializer, _pool);
+            return clientConnection.ServiceConnection.WriteAsync(message);
         }
         throw new InvalidOperationException("No service connection found when sending message");
     }

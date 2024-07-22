@@ -13,7 +13,18 @@ internal class ClientConnectionManager : IClientConnectionManager
     private readonly ConcurrentDictionary<string, ClientConnectionContext> _clientConnections =
         new ConcurrentDictionary<string, ClientConnectionContext>();
 
-    public IReadOnlyDictionary<string, ClientConnectionContext> ClientConnections => _clientConnections;
+    public IEnumerable<ClientConnectionContext> ClientConnections
+    {
+        get
+        {
+            foreach (var entity in _clientConnections)
+            {
+                yield return entity.Value;
+            }
+        }
+    }
+
+    public int Count => _clientConnections.Count;
 
     public bool TryAddClientConnection(ClientConnectionContext connection)
     {
@@ -23,6 +34,11 @@ internal class ClientConnectionManager : IClientConnectionManager
     public bool TryRemoveClientConnection(string connectionId, out ClientConnectionContext connection)
     {
         return _clientConnections.TryRemove(connectionId, out connection);
+    }
+
+    public bool TryGetClientConnection(string connectionId, out ClientConnectionContext connection)
+    {
+        return _clientConnections.TryGetValue(connectionId, out connection);
     }
 
     public Task WhenAllCompleted() => Task.WhenAll(_clientConnections.Select(c => c.Value.LifetimeTask));

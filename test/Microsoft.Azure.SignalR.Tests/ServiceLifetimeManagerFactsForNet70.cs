@@ -30,7 +30,7 @@ public class ServiceLifetimeManagerFactsForNet70 : ServiceLifetimeManagerFacts
         var clientInvocationManager = new DefaultClientInvocationManager();
         var clientConnectionContext = GetClientConnectionContextWithConnection(TestConnectionIds[1], protocol);
 
-        var serviceLifetimeManager = GetTestClientInvocationServiceLifetimeManager(serviceConnection, serviceConnectionManager, new ClientConnectionManager(), clientInvocationManager, clientConnectionContext, protocol);
+        var serviceLifetimeManager = GetTestClientInvocationServiceLifetimeManager(serviceConnection, serviceConnectionManager, new ClientConnectionManager(), clientInvocationManager, clientConnectionContext);
 
         var invocationResult = "invocation-correct-result";
 
@@ -84,8 +84,8 @@ public class ServiceLifetimeManagerFactsForNet70 : ServiceLifetimeManagerFacts
         };
 
         var serviceLifetimeManagers = new List<ServiceLifetimeManager<TestHub>>() {
-            GetTestClientInvocationServiceLifetimeManager( new TestServiceConnection(), serviceConnectionManager, clientConnectionManager, clientInvocationManagers[0], null, protocol),
-            GetTestClientInvocationServiceLifetimeManager( new TestServiceConnection(), serviceConnectionManager, clientConnectionManager, clientInvocationManagers[1], clientConnectionContext, protocol)
+            GetTestClientInvocationServiceLifetimeManager( new TestServiceConnection(), serviceConnectionManager, clientConnectionManager, clientInvocationManagers[0], null),
+            GetTestClientInvocationServiceLifetimeManager( new TestServiceConnection(), serviceConnectionManager, clientConnectionManager, clientInvocationManagers[1], clientConnectionContext)
         };
 
         var invocationResult = "invocation-correct-result";
@@ -127,19 +127,17 @@ public class ServiceLifetimeManagerFactsForNet70 : ServiceLifetimeManagerFacts
     }
 
     private static ServiceLifetimeManager<TestHub> GetTestClientInvocationServiceLifetimeManager(
-                ServiceConnectionBase serviceConnection,
+        ServiceConnectionBase serviceConnection,
         IServiceConnectionManager<TestHub> serviceConnectionManager,
         ClientConnectionManager clientConnectionManager,
         IClientInvocationManager clientInvocationManager = null,
-        ClientConnectionContext clientConnectionContext = null,
-        string protocol = "json"
-        )
+        ClientConnectionContext clientConnection = null)
     {
         // Add a client to ClientConnectionManager
-        if (clientConnectionContext != null)
+        if (clientConnection != null)
         {
-            clientConnectionContext.ServiceConnection = serviceConnection;
-            clientConnectionManager.TryAddClientConnection(clientConnectionContext);
+            clientConnection.ServiceConnection = serviceConnection;
+            clientConnectionManager.TryAddClientConnection(clientConnection);
         }
 
         // Create ServiceLifetimeManager

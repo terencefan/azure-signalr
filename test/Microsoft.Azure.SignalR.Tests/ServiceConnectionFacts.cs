@@ -96,7 +96,7 @@ public class ServiceConnectionFacts
 
         var connection2 = await connectionTask2.OrTimeout();
 
-        Assert.Equal(2, proxy.ClientConnectionManager.ClientConnections.Count);
+        Assert.Equal(2, proxy.ClientConnectionManager.Count);
 
         var httpContext2 = connection2.GetHttpContext();
         Assert.NotNull(httpContext2);
@@ -560,7 +560,7 @@ public class ServiceConnectionFacts
         var disconnectTask = proxy.WaitForConnectionCloseAsync(connectionId1);
         await disconnectTask.OrTimeout();
         Assert.Single(proxy.ClientConnections);
-        Assert.Equal(connectionId2, proxy.ClientConnections.FirstOrDefault().Key);
+        Assert.Equal(connectionId2, proxy.ClientConnections.FirstOrDefault().ConnectionId);
     }
 
     /// <summary>

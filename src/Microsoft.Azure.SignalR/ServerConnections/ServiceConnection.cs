@@ -127,7 +127,7 @@ internal partial class ServiceConnection : ServiceConnectionBase
 
     protected override ReadOnlyMemory<byte> GetPingMessage()
     {
-        _pingMessages[1] = _clientConnectionManager.ClientConnections.Count.ToString();
+        _pingMessages[1] = _clientConnectionManager.Count.ToString();
         _pingMessages[3] = _connectionIds.Count.ToString();
 
         return ServiceProtocol.GetMessageBytes(
@@ -178,20 +178,20 @@ internal partial class ServiceConnection : ServiceConnectionBase
         var connectionId = closeConnectionMessage.ConnectionId;
         // make sure there is no await operation before _bufferingMessages.
         _bufferingMessages.Remove(connectionId);
-        if (_clientConnectionManager.ClientConnections.TryGetValue(connectionId, out var context))
+        if (_clientConnectionManager.TryGetClientConnection(connectionId, out var clientConnection))
         {
             if (closeConnectionMessage.Headers.TryGetValue(Constants.AsrsMigrateTo, out var to))
             {
-                context.AbortOnClose = false;
-                context.Features.Set<IConnectionMigrationFeature>(new ConnectionMigrationFeature(ServerId, to));
+                clientConnection.AbortOnClose = false;
+                clientConnection.Features.Set<IConnectionMigrationFeature>(new ConnectionMigrationFeature(ServerId, to));
 
                 // We have to prevent SignalR `{type: 7}` (close message) from reaching our client while doing migration.
                 // Since all data messages will be sent to `ServiceConnection` directly.
                 // We can simply ignore all messages came from the application.
-                context.CancelOutgoing();
+                clientConnection.CancelOutgoing();
 
                 // The close connection message must be the last message, so we could complete the pipe.
-                context.CompleteIncoming();
+                clientConnection.CompleteIncoming();
             }
         }
         return PerformDisconnectAsyncCore(connectionId);
@@ -203,7 +203,7 @@ internal partial class ServiceConnection : ServiceConnectionBase
         {
             MessageLog.ReceiveMessageFromService(Logger, connectionDataMessage);
         }
-        if (_clientConnectionManager.ClientConnections.TryGetValue(connectionDataMessage.ConnectionId, out var connection))
+        if (_clientConnectionManager.TryGetClientConnection(connectionDataMessage.ConnectionId, out var connection))
         {
             try
             {

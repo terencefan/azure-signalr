@@ -809,7 +809,9 @@ public class ServiceConnectionTests : VerifiableLoggedTest
         private readonly ConcurrentDictionary<string, TaskCompletionSource<ClientConnectionContext>> _tcsForRemoval
             = new ConcurrentDictionary<string, TaskCompletionSource<ClientConnectionContext>>();
 
-        public IReadOnlyDictionary<string, ClientConnectionContext> ClientConnections => _ccm.ClientConnections;
+        public IEnumerable<ClientConnectionContext> ClientConnections => _ccm.ClientConnections;
+
+        public int Count => _ccm.Count;
 
         public TestClientConnectionManager()
         {
@@ -850,6 +852,11 @@ public class ServiceConnectionTests : VerifiableLoggedTest
             var r = _ccm.TryRemoveClientConnection(connectionId, out connection);
             tcs.TrySetResult(connection);
             return r;
+        }
+
+        public bool TryGetClientConnection(string connectionId, out ClientConnectionContext connection)
+        {
+            return _ccm.TryGetClientConnection(connectionId, out connection);
         }
 
         public Task WhenAllCompleted()

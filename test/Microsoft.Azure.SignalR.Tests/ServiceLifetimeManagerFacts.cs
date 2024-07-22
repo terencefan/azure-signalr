@@ -213,17 +213,17 @@ public class ServiceLifetimeManagerFacts
         var serviceConnectionManager = new TestServiceConnectionManager<TestHub>();
         var clientConnectionManager = new ClientConnectionManager();
 
-        var context = new ClientConnectionContext(new OpenConnectionMessage("conn1", Array.Empty<Claim>()));
-        var connection = new TestServiceConnectionPrivate();
-        context.ServiceConnection = connection;
-        clientConnectionManager.TryAddClientConnection(context);
+        var clientConnection = new ClientConnectionContext(new OpenConnectionMessage("conn1", Array.Empty<Claim>()));
+        var serviceConnection = new TestServiceConnectionPrivate();
+        clientConnection.ServiceConnection = serviceConnection;
+        clientConnectionManager.TryAddClientConnection(clientConnection);
 
         var manager = MockLifetimeManager(serviceConnectionManager, clientConnectionManager);
 
         await manager.SendConnectionAsync("conn1", "foo", new object[] { 1, 2 });
 
-        Assert.NotNull(connection.LastMessage);
-        if (connection.LastMessage is MultiConnectionDataMessage m)
+        Assert.NotNull(serviceConnection.LastMessage);
+        if (serviceConnection.LastMessage is MultiConnectionDataMessage m)
         {
             Assert.Equal("conn1", m.ConnectionList[0]);
             Assert.Equal(1, m.Payloads.Count);

@@ -88,7 +88,7 @@ internal partial class ServiceConnection : ServiceConnectionBase
     {
         // Create empty transport with only channel for async processing messages
         var connectionId = openConnectionMessage.ConnectionId;
-        var clientContext = new ClientConnectionContext(this, connectionId, GetInstanceId(openConnectionMessage.Headers));
+        var clientConnection = new ClientConnectionContext(this, connectionId, GetInstanceId(openConnectionMessage.Headers));
 
         var isDiagnosticClient = false;
         openConnectionMessage.Headers.TryGetValue(Constants.AsrsIsDiagnosticClient, out var isDiagnosticClientValue);
@@ -100,10 +100,10 @@ internal partial class ServiceConnection : ServiceConnectionBase
         // todo: ignore asp.net for now
         using (new ClientConnectionScope(endpoint: HubEndpoint, outboundConnection: this, isDiagnosticClient: isDiagnosticClient))
         {
-            if (_clientConnectionManager.TryAddClientConnection(clientContext))
+            if (_clientConnectionManager.TryAddClientConnection(clientConnection))
             {
-                _clientConnections.TryAdd(connectionId, clientContext);
-                clientContext.ApplicationTask = ProcessMessageAsync(clientContext, clientContext.CancellationToken);
+                _clientConnections.TryAdd(connectionId, clientConnection);
+                clientConnection.ApplicationTask = ProcessMessageAsync(clientConnection, clientConnection.CancellationToken);
                 return ForwardMessageToApplication(connectionId, openConnectionMessage);
             }
             else

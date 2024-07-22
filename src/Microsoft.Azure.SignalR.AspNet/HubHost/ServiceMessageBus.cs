@@ -91,11 +91,11 @@ internal class ServiceMessageBus : MessageBus
                     break;
                 case ConnectionDataMessage connectionDataMessage:
                     var connectionId = connectionDataMessage.ConnectionId;
-                    if (_clientConnectionManager.TryGetClientConnection(connectionId, out var conn))
+                    if (_clientConnectionManager.TryGetClientConnection(connectionId, out var clientConnection))
                     {
                         // If the client connection is connected to local server connection,
                         // send back directly from the established server connection
-                        await conn.ServiceConnection.WriteAsync(connectionDataMessage);
+                        await clientConnection.ServiceConnection.WriteAsync(connectionDataMessage);
                     }
                     else
                     {

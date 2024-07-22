@@ -88,7 +88,9 @@ public class ServiceHubDispatcherTests
 
         private readonly StrongBox<int> _index;
 
-        public IReadOnlyDictionary<string, ClientConnectionContext> ClientConnections => throw new NotImplementedException();
+        public IEnumerable<ClientConnectionContext> ClientConnections => throw new NotImplementedException();
+
+        public int Count => throw new NotImplementedException();
 
         public TestClientConnectionManager(StrongBox<int> index)
         {
@@ -107,6 +109,11 @@ public class ServiceHubDispatcherTests
         }
 
         public bool TryRemoveClientConnection(string connectionId, out ClientConnectionContext connection)
+        {
+            throw new NotImplementedException();
+        }
+
+        public bool TryGetClientConnection(string connectionId, out ClientConnectionContext connection)
         {
             throw new NotImplementedException();
         }

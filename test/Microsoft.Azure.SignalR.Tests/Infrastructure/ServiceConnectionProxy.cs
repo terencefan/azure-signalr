@@ -58,7 +58,7 @@ internal class ServiceConnectionProxy : IClientConnectionManager, IClientConnect
 
     public ConcurrentDictionary<string, ServiceConnection> ServiceConnections { get; } = new ConcurrentDictionary<string, ServiceConnection>();
 
-    public IReadOnlyDictionary<string, ClientConnectionContext> ClientConnections => ClientConnectionManager.ClientConnections;
+    public IEnumerable<ClientConnectionContext> ClientConnections => ClientConnectionManager.ClientConnections;
 
     public bool AllowStatefulReconnects { get; }
 
@@ -66,12 +66,13 @@ internal class ServiceConnectionProxy : IClientConnectionManager, IClientConnect
 
     public Channel<ServiceMessage> ApplicationMessages { get; } = Channel.CreateUnbounded<ServiceMessage>();
 
-    public ServiceConnectionProxy(
-                        ConnectionDelegate callback = null,
-        PipeOptions clientPipeOptions = null,
-        Func<Func<TestConnection, Task>, TestConnectionFactory> connectionFactoryCallback = null,
-        int connectionCount = 1,
-        bool allowStatefulReconnects = false)
+    public int Count => ClientConnectionManager.Count;
+
+    public ServiceConnectionProxy(ConnectionDelegate callback = null,
+                                  PipeOptions clientPipeOptions = null,
+                                  Func<Func<TestConnection, Task>, TestConnectionFactory> connectionFactoryCallback = null,
+                                  int connectionCount = 1,
+                                  bool allowStatefulReconnects = false)
     {
         ConnectionFactory = connectionFactoryCallback?.Invoke(ConnectionFactoryCallbackAsync) ?? new TestConnectionFactory(ConnectionFactoryCallbackAsync);
         ClientConnectionManager = new ClientConnectionManager();
@@ -257,6 +258,11 @@ internal class ServiceConnectionProxy : IClientConnectionManager, IClientConnect
             return true;
         }
         return false;
+    }
+
+    public bool TryGetClientConnection(string connectionId, out ClientConnectionContext connection)
+    {
+        return ClientConnectionManager.TryGetClientConnection(connectionId, out connection);
     }
 
     public ClientConnectionContext CreateConnection(OpenConnectionMessage message, Action<HttpContext> configureContext = null)
