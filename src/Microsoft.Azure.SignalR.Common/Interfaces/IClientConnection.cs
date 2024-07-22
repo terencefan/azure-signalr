@@ -16,6 +16,12 @@ internal interface IClientConnection
     string InstanceId { get; }
 
     /// <summary>
+    /// The connection protocol being used.
+    /// JSON / MesssagePack
+    /// </summary>
+    string HubProtocol { get; }
+
+    /// <summary>
     /// The server connection associated with this client connection.
     /// </summary>
     IServiceConnection ServiceConnection { get; }
