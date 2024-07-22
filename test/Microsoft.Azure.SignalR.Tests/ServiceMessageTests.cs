@@ -21,7 +21,6 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Xunit;
 using Xunit.Abstractions;
-using static Microsoft.Azure.SignalR.Tests.ServiceConnectionTests;
 
 using SignalRProtocol = Microsoft.AspNetCore.SignalR.Protocol;
 

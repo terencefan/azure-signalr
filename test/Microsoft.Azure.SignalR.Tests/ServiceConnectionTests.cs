@@ -3,7 +3,6 @@
 
 using System;
 using System.Buffers;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Security.Claims;
@@ -796,72 +795,6 @@ public class ServiceConnectionTests : VerifiableLoggedTest
             await connectionTask.OrTimeout(1000);
             Assert.Equal(ServiceConnectionStatus.Disconnected, connection.Status);
             Assert.Empty(ccm.ClientConnections);
-        }
-    }
-
-    internal sealed class TestClientConnectionManager : IClientConnectionManager
-    {
-        private readonly ClientConnectionManager _ccm = new ClientConnectionManager();
-
-        private readonly ConcurrentDictionary<string, TaskCompletionSource<ClientConnectionContext>> _tcs =
-            new ConcurrentDictionary<string, TaskCompletionSource<ClientConnectionContext>>();
-
-        private readonly ConcurrentDictionary<string, TaskCompletionSource<ClientConnectionContext>> _tcsForRemoval
-            = new ConcurrentDictionary<string, TaskCompletionSource<ClientConnectionContext>>();
-
-        public IEnumerable<ClientConnectionContext> ClientConnections => _ccm.ClientConnections;
-
-        public int Count => _ccm.Count;
-
-        public TestClientConnectionManager()
-        {
-        }
-
-        public Task<ClientConnectionContext> WaitForClientConnectionRemovalAsync(string id)
-        {
-            var tcs = _tcsForRemoval.GetOrAdd(id,
-                s => new TaskCompletionSource<ClientConnectionContext>(TaskCreationOptions
-                    .RunContinuationsAsynchronously));
-            return tcs.Task;
-        }
-
-        public Task<ClientConnectionContext> WaitForClientConnectionAsync(string id)
-        {
-            var tcs = _tcs.GetOrAdd(id,
-                s => new TaskCompletionSource<ClientConnectionContext>(TaskCreationOptions
-                    .RunContinuationsAsynchronously));
-            return tcs.Task;
-        }
-
-        public bool TryAddClientConnection(ClientConnectionContext connection)
-        {
-            var tcs = _tcs.GetOrAdd(connection.ConnectionId,
-                s => new TaskCompletionSource<ClientConnectionContext>(TaskCreationOptions
-                    .RunContinuationsAsynchronously));
-            var r = _ccm.TryAddClientConnection(connection);
-            tcs.SetResult(connection);
-            return r;
-        }
-
-        public bool TryRemoveClientConnection(string connectionId, out ClientConnectionContext connection)
-        {
-            var tcs = _tcsForRemoval.GetOrAdd(connectionId,
-                s => new TaskCompletionSource<ClientConnectionContext>(TaskCreationOptions
-                    .RunContinuationsAsynchronously));
-            _tcs.TryRemove(connectionId, out _);
-            var r = _ccm.TryRemoveClientConnection(connectionId, out connection);
-            tcs.TrySetResult(connection);
-            return r;
-        }
-
-        public bool TryGetClientConnection(string connectionId, out ClientConnectionContext connection)
-        {
-            return _ccm.TryGetClientConnection(connectionId, out connection);
-        }
-
-        public Task WhenAllCompleted()
-        {
-            return Task.CompletedTask;
         }
     }
 

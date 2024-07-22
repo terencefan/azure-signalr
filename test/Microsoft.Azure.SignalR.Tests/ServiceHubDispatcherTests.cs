@@ -82,43 +82,6 @@ public class ServiceHubDispatcherTests
         }
     }
 
-    private sealed class TestClientConnectionManager : IClientConnectionManager
-    {
-        public int CompleteIndex = -1;
-
-        private readonly StrongBox<int> _index;
-
-        public IEnumerable<ClientConnectionContext> ClientConnections => throw new NotImplementedException();
-
-        public int Count => throw new NotImplementedException();
-
-        public TestClientConnectionManager(StrongBox<int> index)
-        {
-            _index = index;
-        }
-
-        public async Task WhenAllCompleted()
-        {
-            await Task.Yield();
-            CompleteIndex = Interlocked.Increment(ref _index.Value);
-        }
-
-        public bool TryAddClientConnection(ClientConnectionContext connection)
-        {
-            throw new NotImplementedException();
-        }
-
-        public bool TryRemoveClientConnection(string connectionId, out ClientConnectionContext connection)
-        {
-            throw new NotImplementedException();
-        }
-
-        public bool TryGetClientConnection(string connectionId, out ClientConnectionContext connection)
-        {
-            throw new NotImplementedException();
-        }
-    }
-
     private sealed class TestOptions : IOptions<ServiceOptions>
     {
         public ServiceOptions Value { get; } = new ServiceOptions();
