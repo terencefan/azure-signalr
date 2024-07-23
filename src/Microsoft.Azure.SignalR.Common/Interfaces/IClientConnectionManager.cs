@@ -1,15 +1,15 @@
-﻿// Copyright (c) Microsoft. All rights reserved.
-// Licensed under the MIT license. See LICENSE file in the project root for full license information.
-
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
+using System.Threading.Tasks;
 
 namespace Microsoft.Azure.SignalR;
 
-internal interface IClientConnectionManager : IClientConnectionLifetimeManager
+internal interface IClientConnectionManager
 {
     IEnumerable<IClientConnection> ClientConnections { get; }
 
     int Count { get; }
+
+    Task WhenAllCompleted();
 
     bool TryAddClientConnection(IClientConnection connection);
 

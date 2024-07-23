@@ -118,6 +118,12 @@ namespace Microsoft.Azure.SignalR.AspNet
                 configuration.Resolver.Register(typeof(IClientConnectionManager), () => ccm);
             }
 
+            var cctf = configuration.Resolver.Resolve<IClientConnectionTransportFactory>();
+            if (cctf == null)
+            {
+                configuration.Resolver.Register(typeof(IClientConnectionTransportFactory), () => ccm);
+            }
+
             var atm = new AzureTransportManager(configuration.Resolver);
             configuration.Resolver.Register(typeof(ITransportManager), () => atm);
 
@@ -138,7 +144,7 @@ namespace Microsoft.Azure.SignalR.AspNet
             if (scf == null)
             {
                 var connectionFactory = new ConnectionFactory(serverNameProvider, loggerFactory);
-                scf = new ServiceConnectionFactory(serviceProtocol, ccm, connectionFactory, loggerFactory, serverNameProvider, serviceEventHandler);
+                scf = new ServiceConnectionFactory(serviceProtocol, ccm, cctf, connectionFactory, loggerFactory, serverNameProvider, serviceEventHandler);
                 configuration.Resolver.Register(typeof(IServiceConnectionFactory), () => scf);
             }
 

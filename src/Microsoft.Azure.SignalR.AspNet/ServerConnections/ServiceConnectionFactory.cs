@@ -10,6 +10,8 @@ internal class ServiceConnectionFactory : IServiceConnectionFactory
 
     private readonly IClientConnectionManager _clientConnectionManager;
 
+    private readonly IClientConnectionTransportFactory _clientConnectionTransportFactory;
+
     private readonly IConnectionFactory _connectionFactory;
 
     private readonly ILoggerFactory _logger;
@@ -21,6 +23,7 @@ internal class ServiceConnectionFactory : IServiceConnectionFactory
     public ServiceConnectionFactory(
         IServiceProtocol serviceProtocol,
         IClientConnectionManager clientConnectionManager,
+        IClientConnectionTransportFactory clientConnectionTransportFactory,
         IConnectionFactory connectionFactory,
         ILoggerFactory logger,
         IServerNameProvider nameProvider,
@@ -28,6 +31,7 @@ internal class ServiceConnectionFactory : IServiceConnectionFactory
     {
         _serviceProtocol = serviceProtocol;
         _clientConnectionManager = clientConnectionManager;
+        _clientConnectionTransportFactory = clientConnectionTransportFactory;
         _connectionFactory = connectionFactory;
         _logger = logger;
         _nameProvider = nameProvider;
@@ -43,6 +47,7 @@ internal class ServiceConnectionFactory : IServiceConnectionFactory
             _serviceProtocol,
             _connectionFactory,
             _clientConnectionManager,
+            _clientConnectionTransportFactory,
             _logger,
             serviceMessageHandler,
             _serviceEventHandler,

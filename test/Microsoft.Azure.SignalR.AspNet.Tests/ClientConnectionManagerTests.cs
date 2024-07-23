@@ -19,6 +19,8 @@ public class ClientConnectionManagerTests
 {
     private readonly ClientConnectionManager _clientConnectionManager;
 
+    private readonly ClientConnectionTransportFactory _transportFactory;
+
     private ClientConnectionManager CreateClientConnectionManager()
     {
         var hubConfig = new HubConfiguration
@@ -34,6 +36,7 @@ public class ClientConnectionManagerTests
     public ClientConnectionManagerTests()
     {
         _clientConnectionManager = CreateClientConnectionManager();
+        _transportFactory = _clientConnectionManager.TransportFactory;
     }
 
     [Theory]
@@ -43,7 +46,7 @@ public class ClientConnectionManagerTests
     public async Task TestCreateConnectionAlwaysUsesConnectionIdInOpenConnectionMessage(string queryString, string expectedConnectionId)
     {
         var message = new OpenConnectionMessage(expectedConnectionId, new Claim[0], null, queryString);
-        var connection = await _clientConnectionManager.CreateConnection(message);
+        var connection = await _transportFactory.CreateConnection(message);
         Assert.Equal(expectedConnectionId, connection.ConnectionId);
     }
 
@@ -54,7 +57,7 @@ public class ClientConnectionManagerTests
     public async Task TestCreateConnectionWithInvalidQueryStringThrows(string queryString)
     {
         var message = new OpenConnectionMessage(Guid.NewGuid().ToString("N"), new Claim[0], null, queryString);
-        await Assert.ThrowsAsync<InvalidOperationException>(() => _clientConnectionManager.CreateConnection(message));
+        await Assert.ThrowsAsync<InvalidOperationException>(() => _transportFactory.CreateConnection(message));
     }
 
     [Theory]
@@ -74,9 +77,9 @@ public class ClientConnectionManagerTests
             }
             , queryString);
         var response = new MemoryStream();
-        var context = _clientConnectionManager.GetHostContext(message, response);
+        var context = _transportFactory.GetHostContext(message, response);
         Assert.Equal(200, context.Response.StatusCode);
-        Assert.Equal("", ClientConnectionManager.GetContentAndDispose(response));
+        Assert.Equal("", ClientConnectionTransportFactory.GetContentAndDispose(response));
         Assert.Equal("value1", context.Request.Headers["custom1"]);
         Assert.Equal(expectedToken, context.Request.QueryString["connectionToken"]);
     }

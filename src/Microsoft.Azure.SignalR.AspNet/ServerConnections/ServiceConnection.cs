@@ -33,6 +33,8 @@ internal partial class ServiceConnection : ServiceConnectionBase
 
     private readonly IClientConnectionManager _clientConnectionManager;
 
+    private readonly IClientConnectionTransportFactory _clientConnectionTransportFactory;
+
     private readonly AckHandler _ackHandler;
 
     public ServiceConnection(
@@ -42,6 +44,7 @@ internal partial class ServiceConnection : ServiceConnectionBase
         IServiceProtocol serviceProtocol,
         IConnectionFactory connectionFactory,
         IClientConnectionManager clientConnectionManager,
+        IClientConnectionTransportFactory clientConnectionTransportFactory,
         ILoggerFactory loggerFactory,
         IServiceMessageHandler serviceMessageHandler,
         IServiceEventHandler serviceEventHandler,
@@ -59,6 +62,7 @@ internal partial class ServiceConnection : ServiceConnectionBase
     {
         _connectionFactory = connectionFactory;
         _clientConnectionManager = clientConnectionManager;
+        _clientConnectionTransportFactory = clientConnectionTransportFactory;
         _ackHandler = ackHandler;
     }
 
@@ -242,7 +246,7 @@ internal partial class ServiceConnection : ServiceConnectionBase
         var connectionId = message.ConnectionId;
         try
         {
-            clientContext.Transport = await _clientConnectionManager.CreateConnection(message);
+            clientContext.Transport = await _clientConnectionTransportFactory.CreateConnection(message);
             Log.ConnectedStarting(Logger, connectionId);
         }
         catch (Exception e)

@@ -12,6 +12,7 @@ using Microsoft.Extensions.Logging;
 namespace Microsoft.Azure.SignalR.AspNet.Tests;
 
 internal class TestServiceConnectionProxy(IClientConnectionManager clientConnectionManager,
+                                          IClientConnectionTransportFactory clientConnectionTransportFactory,
                                           ILoggerFactory loggerFactory,
                                           IServiceMessageHandler serviceMessageHandler = null) : ServiceConnection(
                                               "serverId",
@@ -20,6 +21,7 @@ internal class TestServiceConnectionProxy(IClientConnectionManager clientConnect
                                               SharedServiceProtocol,
                                               new TestConnectionFactory(),
                                               clientConnectionManager,
+                                              clientConnectionTransportFactory,
                                               loggerFactory,
                                               serviceMessageHandler ?? new TestServiceMessageHandler(),
                                               null,
