@@ -38,8 +38,6 @@ internal partial class ServiceConnection : ServiceConnectionBase
 
     private readonly int _closeTimeOutMilliseconds;
 
-    private readonly IClientConnectionManager _clientConnectionManager;
-
     private readonly ConcurrentDictionary<string, string> _connectionIds =
         new ConcurrentDictionary<string, string>(StringComparer.Ordinal);
 
@@ -75,9 +73,18 @@ internal partial class ServiceConnection : ServiceConnectionBase
                              GracefulShutdownMode mode = GracefulShutdownMode.Off,
                              int closeTimeOutMilliseconds = DefaultCloseTimeoutMilliseconds,
                              bool allowStatefulReconnects = false
-        ) : base(serviceProtocol, serverId, connectionId, endpoint, serviceMessageHandler, serviceEventHandler, connectionType, loggerFactory?.CreateLogger<ServiceConnection>(), mode, allowStatefulReconnects)
+        ) : base(serviceProtocol,
+                 serverId,
+                 connectionId,
+                 endpoint,
+                 serviceMessageHandler,
+                 serviceEventHandler,
+                 clientConnectionManager,
+                 connectionType,
+                 loggerFactory?.CreateLogger<ServiceConnection>(),
+                 mode,
+                 allowStatefulReconnects)
     {
-        _clientConnectionManager = clientConnectionManager;
         _connectionFactory = connectionFactory;
         _connectionDelegate = connectionDelegate;
         _clientConnectionFactory = clientConnectionFactory;

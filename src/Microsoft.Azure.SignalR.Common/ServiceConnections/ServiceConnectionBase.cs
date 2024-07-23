@@ -68,6 +68,8 @@ internal abstract partial class ServiceConnectionBase : IServiceConnection
 
     private ConnectionContext _connectionContext;
 
+    protected readonly IClientConnectionManager _clientConnectionManager;
+
     public ServiceConnectionStatus Status
     {
         get => _status;
@@ -110,6 +112,7 @@ internal abstract partial class ServiceConnectionBase : IServiceConnection
         HubServiceEndpoint endpoint,
         IServiceMessageHandler serviceMessageHandler,
         IServiceEventHandler serviceEventHandler,
+        IClientConnectionManager clientConnectionManager,
         ServiceConnectionType connectionType,
         ILogger logger,
         GracefulShutdownMode mode = GracefulShutdownMode.Off,
@@ -120,8 +123,10 @@ internal abstract partial class ServiceConnectionBase : IServiceConnection
         ConnectionId = connectionId;
 
         _connectionType = connectionType;
+
         HubEndpoint = endpoint;
         _endpointName = HubEndpoint?.ToString() ?? string.Empty;
+
         if (serviceProtocol != null)
         {
             _cachedPingBytes = serviceProtocol.GetMessageBytes(PingMessage.Instance);
@@ -131,8 +136,10 @@ internal abstract partial class ServiceConnectionBase : IServiceConnection
         }
 
         Logger = logger ?? throw new ArgumentNullException(nameof(logger));
+
         _serviceMessageHandler = serviceMessageHandler;
         _serviceEventHandler = serviceEventHandler;
+        _clientConnectionManager = clientConnectionManager;
     }
 
     public event Action<StatusChange> ConnectionStatusChanged;

@@ -23,6 +23,7 @@ internal class TestServiceConnection(ServiceConnectionStatus status = ServiceCon
                                          new TestHubServiceEndpoint(),
                                          serviceMessageHandler,
                                          serviceEventHandler,
+                                         new TestClientConnectionManager(),
                                          ServiceConnectionType.Default,
                                          logger ?? NullLogger.Instance)
 {

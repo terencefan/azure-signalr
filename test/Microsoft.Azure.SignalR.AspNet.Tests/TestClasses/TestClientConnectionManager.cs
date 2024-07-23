@@ -19,7 +19,9 @@ internal sealed class TestClientConnectionManager(IServiceConnection serviceConn
 
     private readonly ConcurrentDictionary<string, IClientConnection> _connections = new ConcurrentDictionary<string, IClientConnection>();
 
-    public IReadOnlyDictionary<string, IClientConnection> ClientConnections => _connections;
+    public IEnumerable<IClientConnection> ClientConnections => _connections.Values;
+
+    public int Count => _connections.Count;
 
     public Task WhenAllCompleted()
     {
