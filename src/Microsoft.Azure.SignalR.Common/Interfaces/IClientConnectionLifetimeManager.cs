@@ -1,9 +1,8 @@
 ﻿using System.Threading.Tasks;
 
-namespace Microsoft.Azure.SignalR
+namespace Microsoft.Azure.SignalR;
+
+internal interface IClientConnectionLifetimeManager
 {
-    internal interface IClientConnectionLifetimeManager
-    {
-        Task WhenAllCompleted();
-    }
+    Task WhenAllCompleted();
 }

@@ -9,12 +9,6 @@ namespace Microsoft.Azure.SignalR;
 
 internal interface IServiceConnection
 {
-    Task StartAsync(string target = null);
-
-    Task WriteAsync(ServiceMessage serviceMessage);
-
-    Task StopAsync();
-
     ServiceConnectionStatus Status { get; }
 
     Task ConnectionInitializedTask { get; }
@@ -22,4 +16,10 @@ internal interface IServiceConnection
     Task ConnectionOfflineTask { get; }
 
     event Action<StatusChange> ConnectionStatusChanged;
+
+    Task StartAsync(string target = null);
+
+    Task WriteAsync(ServiceMessage serviceMessage);
+
+    Task StopAsync();
 }
