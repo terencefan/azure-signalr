@@ -165,7 +165,7 @@ public class ServiceMessageBusTests
                 });
 
         var ccm = new TestClientConnectionManager(anotherSCM);
-        dr.Register(typeof(IClientConnectionManager), () => ccm);
+        dr.Register(typeof(IClientConnectionManagerAspNet), () => ccm);
 
         using (var bus = new ServiceMessageBus(dr, NullLogger<ServiceMessageBus>.Instance))
         {
@@ -251,7 +251,7 @@ public class ServiceMessageBusTests
         var resolver = new DefaultDependencyResolver();
         resolver.Register(typeof(IServiceProtocol), () => new ServiceProtocol());
         var ccm = new TestClientConnectionManager();
-        resolver.Register(typeof(IClientConnectionManager), () => ccm);
+        resolver.Register(typeof(IClientConnectionManagerAspNet), () => ccm);
         var connectionManager = new ServiceConnectionManager(AppName, hubs);
         resolver.Register(typeof(IServiceConnectionManager), () => connectionManager);
         resolver.Register(typeof(IMessageParser), () => new SignalRMessageParser(hubs, resolver, NullLogger<SignalRMessageParser>.Instance));

@@ -16,7 +16,7 @@ using Microsoft.Owin;
 
 namespace Microsoft.Azure.SignalR.AspNet;
 
-internal class ClientConnectionManager : IClientConnectionManager
+internal class ClientConnectionManager : IClientConnectionManagerAspNet
 {
     private readonly HubConfiguration _configuration;
 
@@ -24,7 +24,18 @@ internal class ClientConnectionManager : IClientConnectionManager
 
     private readonly ConcurrentDictionary<string, IClientConnection> _clientConnections = new ConcurrentDictionary<string, IClientConnection>();
 
-    public IReadOnlyDictionary<string, IClientConnection> ClientConnections => _clientConnections;
+    public IEnumerable<IClientConnection> ClientConnections
+    {
+        get
+        {
+            foreach (var entity in _clientConnections)
+            {
+                yield return entity.Value;
+            }
+        }
+    }
+
+    public int Count => _clientConnections.Count;
 
     public ClientConnectionManager(HubConfiguration configuration, ILoggerFactory loggerFactory)
     {

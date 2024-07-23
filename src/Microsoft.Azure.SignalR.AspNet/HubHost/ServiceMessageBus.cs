@@ -18,7 +18,7 @@ internal class ServiceMessageBus : MessageBus
 
     private readonly IServiceConnectionManager _serviceConnectionManager;
 
-    private readonly IClientConnectionManager _clientConnectionManager;
+    private readonly IClientConnectionManagerAspNet _clientConnectionManager;
 
     private readonly IAckHandler _ackHandler;
 
@@ -28,7 +28,7 @@ internal class ServiceMessageBus : MessageBus
     {
         // TODO: find a more decent way instead of DI, it can be easily overriden
         _serviceConnectionManager = resolver.Resolve<IServiceConnectionManager>() ?? throw new ArgumentNullException(nameof(IServiceConnectionManager));
-        _clientConnectionManager = resolver.Resolve<IClientConnectionManager>() ?? throw new ArgumentNullException(nameof(IClientConnectionManager));
+        _clientConnectionManager = resolver.Resolve<IClientConnectionManagerAspNet>() ?? throw new ArgumentNullException(nameof(IClientConnectionManagerAspNet));
         _parser = resolver.Resolve<IMessageParser>() ?? throw new ArgumentNullException(nameof(IMessageParser));
         _ackHandler = resolver.Resolve<IAckHandler>() ?? throw new ArgumentNullException(nameof(IAckHandler));
         _logger = logger ?? throw new ArgumentNullException(nameof(ILogger<ServiceMessageBus>));

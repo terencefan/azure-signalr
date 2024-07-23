@@ -6,13 +6,7 @@ using Microsoft.Azure.SignalR.Protocol;
 
 namespace Microsoft.Azure.SignalR.AspNet;
 
-internal interface IClientConnectionManager : IClientConnectionLifetimeManager
+internal interface IClientConnectionManagerAspNet : IClientConnectionManager
 {
     Task<IServiceTransport> CreateConnection(OpenConnectionMessage message);
-
-    bool TryAddClientConnection(IClientConnection connection);
-
-    bool TryRemoveClientConnection(string connectionId, out IClientConnection connection);
-
-    bool TryGetClientConnection(string connectionId, out IClientConnection connection);
 }

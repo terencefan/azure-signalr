@@ -30,7 +30,7 @@ internal class AzureTransport : IServiceTransport
 
     private readonly ILogger _logger;
 
-    private readonly IClientConnectionManager _clientConnectionManager;
+    private readonly IClientConnectionManagerAspNet _clientConnectionManager;
 
     public Func<string, Task> Received { get; set; }
 
@@ -54,7 +54,7 @@ internal class AzureTransport : IServiceTransport
         _logger = resolver.Resolve<ILoggerFactory>()?.CreateLogger<AzureTransport>() ??
                   NullLogger<AzureTransport>.Instance;
 
-        _clientConnectionManager = resolver.Resolve<IClientConnectionManager>();
+        _clientConnectionManager = resolver.Resolve<IClientConnectionManagerAspNet>();
     }
 
     public Task<string> GetGroupsToken()
