@@ -1609,7 +1609,7 @@ public class MultiEndpointServiceConnectionContainerTests : VerifiableLoggedTest
         {
             // prepare containers
             var ccm = new TestClientConnectionManager();
-            var ccf = new ClientConnectionFactory();
+            var ccf = new ClientConnectionFactory(NullLoggerFactory.Instance);
             var protocol = new ServiceProtocol();
             TestConnection transportConnection1 = null;
             TestConnection transportConnection2 = null;

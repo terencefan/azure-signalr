@@ -21,6 +21,8 @@ using Microsoft.AspNetCore.Http.Features;
 using Microsoft.AspNetCore.Http.Features.Authentication;
 using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.Azure.SignalR.Protocol;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Primitives;
 
 namespace Microsoft.Azure.SignalR;
@@ -119,6 +121,8 @@ internal class ClientConnectionContext : ConnectionContext,
     public DateTime StartedAtUtc { get; } = DateTime.UtcNow;
 
     public long ReceivedBytes => Volatile.Read(ref _receivedBytes);
+
+    public ILogger<ServiceConnection> Logger { get; init; } = NullLogger<ServiceConnection>.Instance;
 
     public ClientConnectionContext(OpenConnectionMessage serviceMessage,
                                    Action<HttpContext> configureContext = null,

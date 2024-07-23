@@ -39,7 +39,7 @@ public class ServiceConnectionTests : VerifiableLoggedTest
         using (StartVerifiableLog(out var loggerFactory))
         {
             var ccm = new TestClientConnectionManager();
-            var ccf = new ClientConnectionFactory();
+            var ccf = new ClientConnectionFactory(loggerFactory);
             var protocol = new ServiceProtocol();
             var hubProtocol = new JsonHubProtocol();
             TestConnection transportConnection = null;
@@ -100,7 +100,7 @@ public class ServiceConnectionTests : VerifiableLoggedTest
         using (StartVerifiableLog(out var loggerFactory))
         {
             var ccm = new TestClientConnectionManager();
-            var ccf = new ClientConnectionFactory();
+            var ccf = new ClientConnectionFactory(loggerFactory);
             var protocol = new ServiceProtocol();
             var hubProtocol = new JsonHubProtocol();
             TestConnection transportConnection = null;
@@ -154,7 +154,7 @@ public class ServiceConnectionTests : VerifiableLoggedTest
             }))
         {
             var ccm = new TestClientConnectionManager();
-            var ccf = new ClientConnectionFactory();
+            var ccf = new ClientConnectionFactory(loggerFactory);
             var protocol = new ServiceProtocol();
             var hubProtocol = new JsonHubProtocol();
             TestConnection transportConnection = null;
@@ -222,7 +222,7 @@ public class ServiceConnectionTests : VerifiableLoggedTest
             }))
         {
             var ccm = new TestClientConnectionManager();
-            var ccf = new ClientConnectionFactory();
+            var ccf = new ClientConnectionFactory(loggerFactory);
             var protocol = new ServiceProtocol();
             var hubProtocol = new JsonHubProtocol();
             TestConnection transportConnection = null;
@@ -281,7 +281,7 @@ public class ServiceConnectionTests : VerifiableLoggedTest
             }))
         {
             var ccm = new TestClientConnectionManager();
-            var ccf = new ClientConnectionFactory();
+            var ccf = new ClientConnectionFactory(loggerFactory);
             var protocol = new ServiceProtocol();
             var hubProtocol = new JsonHubProtocol();
             TestConnection transportConnection = null;
@@ -336,7 +336,7 @@ public class ServiceConnectionTests : VerifiableLoggedTest
             logChecker: logs => true))
         {
             var ccm = new TestClientConnectionManager();
-            var ccf = new ClientConnectionFactory();
+            var ccf = new ClientConnectionFactory(loggerFactory);
             var protocol = new ServiceProtocol();
             var hubProtocol = new JsonHubProtocol();
             TestConnection transportConnection = null;
@@ -407,7 +407,7 @@ public class ServiceConnectionTests : VerifiableLoggedTest
         using (StartVerifiableLog(out var loggerFactory, LogLevel.Debug))
         {
             var ccm = new TestClientConnectionManager();
-            var ccf = new ClientConnectionFactory();
+            var ccf = new ClientConnectionFactory(loggerFactory);
             var protocol = new ServiceProtocol();
             var hubProtocol = new JsonHubProtocol();
             TestConnection transportConnection = null;
@@ -478,7 +478,7 @@ public class ServiceConnectionTests : VerifiableLoggedTest
         using (StartVerifiableLog(out var loggerFactory, LogLevel.Warning, logChecker: logs => true))
         {
             var ccm = new TestClientConnectionManager();
-            var ccf = new ClientConnectionFactory();
+            var ccf = new ClientConnectionFactory(loggerFactory);
             var protocol = new ServiceProtocol();
             var hubProtocol = new JsonHubProtocol();
             TestConnection serviceConnection = null;
@@ -566,7 +566,7 @@ public class ServiceConnectionTests : VerifiableLoggedTest
             }))
         {
             var ccm = new TestClientConnectionManager();
-            var ccf = new ClientConnectionFactory();
+            var ccf = new ClientConnectionFactory(loggerFactory);
             var protocol = new ServiceProtocol();
             var hubProtocol = new JsonHubProtocol();
             TestConnection transportConnection = null;
@@ -635,7 +635,7 @@ public class ServiceConnectionTests : VerifiableLoggedTest
             }))
         {
             var ccm = new TestClientConnectionManager();
-            var ccf = new ClientConnectionFactory();
+            var ccf = new ClientConnectionFactory(loggerFactory);
             var protocol = new ServiceProtocol();
             var hubProtocol = new JsonHubProtocol();
             TestConnection transportConnection = null;
@@ -724,7 +724,7 @@ public class ServiceConnectionTests : VerifiableLoggedTest
             }))
         {
             var ccm = new TestClientConnectionManager();
-            var ccf = new ClientConnectionFactory();
+            var ccf = new ClientConnectionFactory(loggerFactory);
             var protocol = new ServiceProtocol();
             var hubProtocol = new JsonHubProtocol();
             TestConnection transportConnection = null;
