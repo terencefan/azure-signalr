@@ -20,6 +20,10 @@ internal sealed class TestSimpleServiceConnection : IServiceConnection
 
     public Task ConnectionOfflineTask => Task.CompletedTask;
 
+    public string ConnectionId => throw new NotImplementedException();
+
+    public string ServerId => throw new NotImplementedException();
+
     public TestSimpleServiceConnection(ServiceConnectionStatus status = ServiceConnectionStatus.Connected,
                                        bool throws = false,
                                        TaskCompletionSource<object> writeAsyncTcs = null)
