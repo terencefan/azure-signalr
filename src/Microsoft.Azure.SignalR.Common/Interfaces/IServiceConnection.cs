@@ -9,6 +9,10 @@ namespace Microsoft.Azure.SignalR;
 
 internal interface IServiceConnection
 {
+    string ConnectionId { get; }
+
+    string ServerId { get; }
+
     ServiceConnectionStatus Status { get; }
 
     Task ConnectionInitializedTask { get; }

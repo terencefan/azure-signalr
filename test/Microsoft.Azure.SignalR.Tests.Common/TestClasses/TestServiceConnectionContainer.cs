@@ -23,7 +23,11 @@ internal sealed class TestServiceConnectionContainer : IServiceConnectionContain
 
     public IReadOnlyDictionary<ServiceEndpoint, IServiceConnectionContainer> ConnectionContainers { get; }
 
+    public string ConnectionId => throw new NotImplementedException();
+
     public string ServersTag => throw new NotSupportedException();
+
+    public string ServerId => throw new NotImplementedException();
 
     public bool HasClients => throw new NotSupportedException();
 
