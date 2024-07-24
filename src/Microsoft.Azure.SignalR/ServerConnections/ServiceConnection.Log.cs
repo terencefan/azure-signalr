@@ -39,9 +39,6 @@ internal partial class ServiceConnection
         private static readonly Action<ILogger, Exception> _applicationTaskFailed =
             LoggerMessage.Define(LogLevel.Error, new EventId(8, "ApplicationTaskFailed"), "Application task failed.");
 
-        private static readonly Action<ILogger, ulong?, string, Exception> _failToWriteMessageToApplication =
-            LoggerMessage.Define<ulong?, string>(LogLevel.Error, new EventId(9, "FailToWriteMessageToApplication"), "Failed to write message {tracingId} to {TransportConnectionId}.");
-
         private static readonly Action<ILogger, ulong?, string, Exception> _receivedMessageForNonExistentConnection =
             LoggerMessage.Define<ulong?, string>(LogLevel.Warning, new EventId(10, "ReceivedMessageForNonExistentConnection"), "Received message {tracingId} for connection {TransportConnectionId} which does not exist.");
 
@@ -53,9 +50,6 @@ internal partial class ServiceConnection
 
         private static readonly Action<ILogger, string, Exception> _closeConnection =
             LoggerMessage.Define<string>(LogLevel.Debug, new EventId(13, "CloseConnection"), "Sending close connection message to the service for {TransportConnectionId}.");
-
-        private static readonly Action<ILogger, long, string, Exception> _writeMessageToApplication =
-            LoggerMessage.Define<long, string>(LogLevel.Trace, new EventId(19, "WriteMessageToApplication"), "Writing {ReceivedBytes} to connection {TransportConnectionId}.");
 
         private static readonly Action<ILogger, string, Exception> _serviceConnectionConnected =
             LoggerMessage.Define<string>(LogLevel.Debug, new EventId(20, "ServiceConnectionConnected"), "Service connection {ServiceConnectionId} connected.");
@@ -74,14 +68,6 @@ internal partial class ServiceConnection
 
         private static readonly Action<ILogger, int, string, Exception> _closingClientConnections =
             LoggerMessage.Define<int, string>(LogLevel.Information, new EventId(25, "ClosingClientConnections"), "Closing {ClientCount} client connection(s) for server connection {ServerConnectionId}.");
-
-        private static readonly Action<ILogger, string, Exception> _detectedLongRunningApplicationTask =
-            LoggerMessage.Define<string>(LogLevel.Warning, new EventId(26, "DetectedLongRunningApplicationTask"), "The connection {TransportConnectionId} has a long running application logic that prevents the connection from complete.");
-
-        public static void DetectedLongRunningApplicationTask(ILogger logger, string connectionId)
-        {
-            _detectedLongRunningApplicationTask(logger, connectionId, null);
-        }
 
         public static void WaitingForTransport(ILogger logger)
         {

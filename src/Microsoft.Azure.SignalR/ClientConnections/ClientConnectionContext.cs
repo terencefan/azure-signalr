@@ -98,7 +98,10 @@ internal partial class ClientConnectionContext : ConnectionContext,
 
     public string HubProtocol { get; }
 
-    // Send "Abort" to service on close except that Service asks SDK to close
+    /// <summary>
+    /// TODO: make it private in the next PR, as it has been used in OnClientConnected method
+    /// Send "Abort" to service on close except that Service asks SDK to close
+    /// </summary>
     public bool AbortOnClose
     {
         get => _abortOnClose;
@@ -128,8 +131,6 @@ internal partial class ClientConnectionContext : ConnectionContext,
     public long ReceivedBytes => Volatile.Read(ref _receivedBytes);
 
     public ILogger<ServiceConnection> Logger { get; init; } = NullLogger<ServiceConnection>.Instance;
-
-    public Task DelayTask => Task.Delay(_closeTimeOutMilliseconds);
 
     public ClientConnectionContext(OpenConnectionMessage serviceMessage,
                                    Action<HttpContext> configureContext = null,
@@ -163,22 +164,6 @@ internal partial class ClientConnectionContext : ConnectionContext,
         _closeTimeOutMilliseconds = closeTimeOutMilliseconds;
     }
 
-    public void CompleteIncoming()
-    {
-        // always set the connection state to completing when this method is called
-        var previousState =
-            Interlocked.Exchange(ref _connectionState, CompletedState);
-
-        Application.Output.CancelPendingFlush();
-
-        // If it is idle, complete directly
-        // If it is completing already, complete directly
-        if (previousState != WritingState)
-        {
-            Application.Output.Complete();
-        }
-    }
-
     public void OnCompleted()
     {
         _connectionEndTcs.TrySetResult(null);
@@ -210,6 +195,7 @@ internal partial class ClientConnectionContext : ConnectionContext,
     }
 
     /// <summary>
+    /// TODO: make this method private in the next PR, as it has been used in OnClientConnectedAsync method
     /// Cancel the outgoing process
     /// </summary>
     public void CancelOutgoing(bool wait = false)
@@ -278,6 +264,50 @@ internal partial class ClientConnectionContext : ConnectionContext,
         }
     }
 
+    internal Task ProcessCloseConnectionMessageAsync(CloseConnectionMessage message)
+    {
+        if (message.Headers.TryGetValue(Constants.AsrsMigrateTo, out var to))
+        {
+            AbortOnClose = false;
+            Features.Set<IConnectionMigrationFeature>(new ConnectionMigrationFeature(ServiceConnection.ServerId, to));
+
+            // We have to prevent SignalR `{type: 7}` (close message) from reaching our client while doing migration.
+            // Since all data messages will be sent to `ServiceConnection` directly.
+            // We can simply ignore all messages came from the application.
+            CancelOutgoing();
+
+            // The close connection message must be the last message, so we could complete the pipe.
+            CompleteIncoming();
+        }
+        return PerformDisconnectAsync();
+    }
+
+    internal async Task PerformDisconnectAsync()
+    {
+        ClearBufferedMessages();
+
+        // In normal close, service already knows the client is closed, no need to be informed.
+        AbortOnClose = false;
+
+        // We're done writing to the application output
+        // Let the connection complete incoming
+        CompleteIncoming();
+
+        // wait for the connection's lifetime task to end
+        var lifetime = LifetimeTask;
+
+        // Wait on the application task to complete
+        // We wait gracefully here to be consistent with self-host SignalR
+        await Task.WhenAny(lifetime, Task.Delay(_closeTimeOutMilliseconds));
+
+        if (!lifetime.IsCompleted)
+        {
+            Log.DetectedLongRunningApplicationTask(Logger, ConnectionId);
+        }
+
+        await lifetime;
+    }
+
     internal void ClearBufferedMessages()
     {
         _bufferedMessages.Clear();
@@ -339,6 +369,22 @@ internal partial class ClientConnectionContext : ConnectionContext,
     private static string GetInstanceId(IDictionary<string, StringValues> header)
     {
         return header.TryGetValue(Constants.AsrsInstanceId, out var instanceId) ? (string)instanceId : string.Empty;
+    }
+
+    private void CompleteIncoming()
+    {
+        // always set the connection state to completing when this method is called
+        var previousState =
+            Interlocked.Exchange(ref _connectionState, CompletedState);
+
+        Application.Output.CancelPendingFlush();
+
+        // If it is idle, complete directly
+        // If it is completing already, complete directly
+        if (previousState != WritingState)
+        {
+            Application.Output.Complete();
+        }
     }
 
     private async Task WriteToApplicationAsync(ReadOnlySequence<byte> payload)
