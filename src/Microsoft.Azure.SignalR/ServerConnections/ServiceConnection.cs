@@ -2,7 +2,6 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System;
-using System.Buffers;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
@@ -109,20 +108,18 @@ internal partial class ServiceConnection : ServiceConnectionBase
     {
         // To gracefully complete client connections, let the client itself owns the connection lifetime
 
-        foreach (var connection in _connectionIds)
+        foreach (var entity in _connectionIds)
         {
-            if (!string.IsNullOrEmpty(fromInstanceId) && connection.Value != fromInstanceId)
+            if (!string.IsNullOrEmpty(fromInstanceId) && entity.Value != fromInstanceId)
             {
                 continue;
             }
 
-            if (_clientConnectionManager.TryGetClientConnection(connection.Key, out var c))
+            if (_clientConnectionManager.TryRemoveClientConnection(entity.Key, out var c) && c is ClientConnectionContext connection)
             {
-                (c as ClientConnectionContext)?.ClearBufferedMessages();
+                // We should not wait until all the clients' lifetime ends to restart another service connection
+                _ = PerformDisconnectAsyncCore(connection);
             }
-
-            // We should not wait until all the clients' lifetime ends to restart another service connection
-            _ = PerformDisconnectAsyncCore(connection.Key);
         }
 
         return Task.CompletedTask;
@@ -176,17 +173,11 @@ internal partial class ServiceConnection : ServiceConnectionBase
         return Task.CompletedTask;
     }
 
-    protected override Task OnClientDisconnectedAsync(CloseConnectionMessage closeConnectionMessage)
+    protected override Task OnClientDisconnectedAsync(CloseConnectionMessage message)
     {
-        var connectionId = closeConnectionMessage.ConnectionId;
-        // make sure there is no await operation before _bufferingMessages.
-        if (_clientConnectionManager.TryGetClientConnection(connectionId, out var clientConnection))
+        if (_clientConnectionManager.TryRemoveClientConnection(message.ConnectionId, out var c) && c is ClientConnectionContext connection)
         {
-            var connection = clientConnection as ClientConnectionContext;
-
-            connection.ClearBufferedMessages();
-
-            if (closeConnectionMessage.Headers.TryGetValue(Constants.AsrsMigrateTo, out var to))
+            if (message.Headers.TryGetValue(Constants.AsrsMigrateTo, out var to))
             {
                 connection.AbortOnClose = false;
                 connection.Features.Set<IConnectionMigrationFeature>(new ConnectionMigrationFeature(ServerId, to));
@@ -199,8 +190,10 @@ internal partial class ServiceConnection : ServiceConnectionBase
                 // The close connection message must be the last message, so we could complete the pipe.
                 connection.CompleteIncoming();
             }
+
+            return PerformDisconnectAsyncCore(connection);
         }
-        return PerformDisconnectAsyncCore(connectionId);
+        return Task.CompletedTask;
     }
 
     protected override async Task OnClientMessageAsync(ConnectionDataMessage connectionDataMessage)
@@ -484,31 +477,30 @@ internal partial class ServiceConnection : ServiceConnectionBase
         }
     }
 
-    private async Task PerformDisconnectAsyncCore(string connectionId)
+    private async Task PerformDisconnectAsyncCore(ClientConnectionContext connection)
     {
-        if (TryRemoveClientConnection(connectionId, out var c) && c is ClientConnectionContext connection)
+        connection.ClearBufferedMessages();
+
+        // In normal close, service already knows the client is closed, no need to be informed.
+        connection.AbortOnClose = false;
+
+        // We're done writing to the application output
+        // Let the connection complete incoming
+        connection.CompleteIncoming();
+
+        // wait for the connection's lifetime task to end
+        var lifetime = connection.LifetimeTask;
+
+        // Wait on the application task to complete
+        // We wait gracefully here to be consistent with self-host SignalR
+        await Task.WhenAny(lifetime, connection.DelayTask);
+
+        if (!lifetime.IsCompleted)
         {
-            // In normal close, service already knows the client is closed, no need to be informed.
-            connection.AbortOnClose = false;
-
-            // We're done writing to the application output
-            // Let the connection complete incoming
-            connection.CompleteIncoming();
-
-            // wait for the connection's lifetime task to end
-            var lifetime = connection.LifetimeTask;
-
-            // Wait on the application task to complete
-            // We wait gracefully here to be consistent with self-host SignalR
-            await Task.WhenAny(lifetime, connection.DelayTask);
-
-            if (!lifetime.IsCompleted)
-            {
-                Log.DetectedLongRunningApplicationTask(Logger, connectionId);
-            }
-
-            await lifetime;
+            Log.DetectedLongRunningApplicationTask(Logger, connection.ConnectionId);
         }
+
+        await lifetime;
     }
 
     private Task OnClientInvocationAsync(ClientInvocationMessage message)
