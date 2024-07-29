@@ -5,12 +5,10 @@ using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
-using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Connections;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.SignalR;
-using Microsoft.Azure.SignalR.Common;
 using Microsoft.Azure.SignalR.Protocol;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Primitives;
@@ -73,15 +71,6 @@ internal partial class ServiceConnection : ServiceConnectionBase
         _clientConnectionFactory = clientConnectionFactory;
         _clientInvocationManager = clientInvocationManager;
         _hubProtocolResolver = hubProtocolResolver;
-    }
-
-    private enum ForwardMessageResult
-    {
-        Success,
-
-        Error,
-
-        Fatal,
     }
 
     internal bool TryRemoveClientConnection(string connectionId, out IClientConnection connection)
@@ -161,15 +150,6 @@ internal partial class ServiceConnection : ServiceConnectionBase
             _ = ProcessClientConnectionAsync(connection, _hubProtocolResolver.GetProtocol(message.Protocol, null));
         }
 
-        if (connection.IsMigrated)
-        {
-            Log.MigrationStarting(Logger, connection.ConnectionId);
-        }
-        else
-        {
-            Log.ConnectedStarting(Logger, connection.ConnectionId);
-        }
-
         return Task.CompletedTask;
     }
 
@@ -247,10 +227,10 @@ internal partial class ServiceConnection : ServiceConnectionBase
         try
         {
             // Writing from the application to the service
-            var transport = ProcessOutgoingMessagesAsync(connection, protocol, connection.OutgoingAborted);
+            var transport = connection.ProcessOutgoingMessagesAsync(protocol);
 
             // Waiting for the application to shutdown so we can clean up the connection
-            var app = ProcessApplicationTaskAsyncCore(connection);
+            var app = connection.ProcessApplicationAsync(_connectionDelegate);
 
             var task = await Task.WhenAny(app, transport);
 
@@ -320,161 +300,10 @@ internal partial class ServiceConnection : ServiceConnectionBase
         }
     }
 
-    private async Task ProcessOutgoingMessagesAsync(ClientConnectionContext connection, SignalRProtocol.IHubProtocol protocol, CancellationToken token)
-    {
-        try
-        {
-            var isHandshakeResponseParsed = false;
-            var shouldSkipHandshakeResponse = connection.IsMigrated;
-
-            while (true)
-            {
-                var result = await connection.Application.Input.ReadAsync(token);
-
-                if (result.IsCanceled)
-                {
-                    break;
-                }
-
-                var buffer = result.Buffer;
-
-                if (!buffer.IsEmpty)
-                {
-                    if (!isHandshakeResponseParsed)
-                    {
-                        var next = buffer;
-                        if (SignalRProtocol.HandshakeProtocol.TryParseResponseMessage(ref next, out var message))
-                        {
-                            isHandshakeResponseParsed = true;
-                            if (!shouldSkipHandshakeResponse)
-                            {
-                                var dataMessage = new ConnectionDataMessage(connection.ConnectionId, buffer.Slice(0, next.Start))
-                                {
-                                    Type = DataMessageType.Handshake
-                                };
-                                var forwardResult = await ForwardMessage(dataMessage);
-                                switch (forwardResult)
-                                {
-                                    case ForwardMessageResult.Success:
-                                        break;
-                                    default:
-                                        return;
-                                }
-                            }
-                            buffer = buffer.Slice(next.Start);
-                        }
-                        else
-                        {
-                            // waiting for handshake response.
-                        }
-                    }
-                    if (isHandshakeResponseParsed)
-                    {
-                        var next = buffer;
-                        while (!buffer.IsEmpty && protocol.TryParseMessage(ref next, FakeInvocationBinder.Instance, out var message))
-                        {
-                            var messageType = message switch
-                            {
-                                SignalRProtocol.HubInvocationMessage => DataMessageType.Invocation,
-                                SignalRProtocol.CloseMessage => DataMessageType.Close,
-                                _ => DataMessageType.Other,
-                            };
-                            var dataMessage = new ConnectionDataMessage(connection.ConnectionId, buffer.Slice(0, next.Start))
-                            {
-                                Type = messageType
-                            };
-                            var forwardResult = await ForwardMessage(dataMessage);
-                            switch (forwardResult)
-                            {
-                                case ForwardMessageResult.Fatal:
-                                    return;
-                                default:
-                                    buffer = next;
-                                    break;
-                            }
-                        }
-                    }
-                }
-
-                if (result.IsCompleted)
-                {
-                    // This connection ended (the application itself shut down) we should remove it from the list of connections
-                    break;
-                }
-
-                connection.Application.Input.AdvanceTo(buffer.Start, buffer.End);
-            }
-        }
-        catch (Exception ex)
-        {
-            // The exception means application fail to process input anymore
-            // Cancel any pending flush so that we can quit and perform disconnect
-            // Here is abort close and WaitOnApplicationTask will send close message to notify client to disconnect
-            Log.SendLoopStopped(Logger, connection.ConnectionId, ex);
-            connection.Application.Output.CancelPendingFlush();
-        }
-        finally
-        {
-            connection.Application.Input.Complete();
-        }
-    }
-
-    /// <summary>
-    /// Forward message to service
-    /// </summary>
-    private async Task<ForwardMessageResult> ForwardMessage(ConnectionDataMessage data)
-    {
-        try
-        {
-            // Forward the message to the service
-            await WriteAsync(data);
-            return ForwardMessageResult.Success;
-        }
-        catch (ServiceConnectionNotActiveException)
-        {
-            // Service connection not active means the transport layer for this connection is closed, no need to continue processing
-            return ForwardMessageResult.Fatal;
-        }
-        catch (Exception ex)
-        {
-            Log.ErrorSendingMessage(Logger, ex);
-            return ForwardMessageResult.Error;
-        }
-    }
-
     private void AddClientConnection(ClientConnectionContext connection)
     {
         _clientConnectionManager.TryAddClientConnection(connection);
         _connectionIds.TryAdd(connection.ConnectionId, connection.InstanceId);
-    }
-
-    private async Task ProcessApplicationTaskAsyncCore(ClientConnectionContext connection)
-    {
-        Exception exception = null;
-
-        try
-        {
-            // Wait for the application task to complete
-            // application task can end when exception, or Context.Abort() from hub
-            await _connectionDelegate(connection);
-        }
-        catch (ObjectDisposedException)
-        {
-            // When the application shuts down and disposes IServiceProvider, HubConnectionHandler.RunHubAsync is still running and runs into _dispatcher.OnDisconnectedAsync
-            // no need to throw the error out
-        }
-        catch (Exception ex)
-        {
-            // Capture the exception to communicate it to the transport (this isn't strictly required)
-            exception = ex;
-            throw;
-        }
-        finally
-        {
-            // Close the transport side since the application is no longer running
-            connection.Transport.Output.Complete(exception);
-            connection.Transport.Input.Complete();
-        }
     }
 
     private async Task PerformDisconnectAsyncCore(ClientConnectionContext connection)
@@ -534,16 +363,5 @@ internal partial class ServiceConnection : ServiceConnectionBase
             (connection as ClientConnectionContext)?.ClearBufferedMessages();
         }
         return Task.CompletedTask;
-    }
-
-    private sealed class FakeInvocationBinder : IInvocationBinder
-    {
-        public static readonly FakeInvocationBinder Instance = new FakeInvocationBinder();
-
-        public IReadOnlyList<Type> GetParameterTypes(string methodName) => Type.EmptyTypes;
-
-        public Type GetReturnType(string invocationId) => typeof(object);
-
-        public Type GetStreamItemType(string streamId) => typeof(object);
     }
 }
