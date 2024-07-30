@@ -62,6 +62,20 @@ internal partial class ServiceConnection : ServiceConnectionBase
         _ackHandler = ackHandler;
     }
 
+    public override bool TryAddClientConnection(IClientConnection connection)
+    {
+        var r = _clientConnectionManager.TryAddClientConnection(connection);
+        _clientConnections.TryAdd(connection.ConnectionId, (ClientConnectionContext)connection);
+        return r;
+    }
+
+    public override bool TryRemoveClientConnection(string connectionId, out IClientConnection connection)
+    {
+        var r = _clientConnectionManager.TryRemoveClientConnection(connectionId, out connection);
+        _clientConnections.TryRemove(connectionId, out _);
+        return r;
+    }
+
     protected override Task<ConnectionContext> CreateConnection(string target = null)
     {
         return _connectionFactory.ConnectAsync(HubEndpoint, TransferFormat.Binary, ConnectionId, target,

@@ -104,4 +104,15 @@ internal sealed class TestServiceConnectionContainer : IServiceConnectionContain
     public void Dispose()
     {
     }
+
+    public bool TryAddClientConnection(IClientConnection connection)
+    {
+        return true;
+    }
+
+    public bool TryRemoveClientConnection(string connectionId, out IClientConnection connection)
+    {
+        connection = null;
+        return true;
+    }
 }
