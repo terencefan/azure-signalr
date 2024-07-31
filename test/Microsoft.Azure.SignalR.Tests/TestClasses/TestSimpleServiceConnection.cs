@@ -69,4 +69,15 @@ internal sealed class TestSimpleServiceConnection : IServiceConnection
         _writeAsyncTcs?.TrySetResult(null);
         return Task.FromResult(true);
     }
+
+    public bool TryAddClientConnection(IClientConnection connection)
+    {
+        return true;
+    }
+
+    public bool TryRemoveClientConnection(string connectionId, out IClientConnection connection)
+    {
+        connection = null;
+        return true;
+    }
 }

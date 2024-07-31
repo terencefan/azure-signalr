@@ -289,5 +289,16 @@ public class ServiceConnectionContainerBaseTests : VerifiableLoggedTest
                 return false;
             }
         }
+
+        public bool TryAddClientConnection(IClientConnection connection)
+        {
+            return true;
+        }
+
+        public bool TryRemoveClientConnection(string connectionId, out IClientConnection connection)
+        {
+            connection = null;
+            return true;
+        }
     }
 }

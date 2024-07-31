@@ -83,7 +83,14 @@ internal partial class ServiceConnection : ServiceConnectionBase
         _hubProtocolResolver = hubProtocolResolver;
     }
 
-    internal bool TryRemoveClientConnection(string connectionId, out IClientConnection connection)
+    public override bool TryAddClientConnection(IClientConnection connection)
+    {
+        var r = _clientConnectionManager.TryAddClientConnection(connection);
+        _connectionIds.TryAdd(connection.ConnectionId, connection.InstanceId);
+        return r;
+    }
+
+    public override bool TryRemoveClientConnection(string connectionId, out IClientConnection connection)
     {
         _connectionIds.TryRemove(connectionId, out _);
         var r = _clientConnectionManager.TryRemoveClientConnection(connectionId, out connection);
@@ -117,7 +124,7 @@ internal partial class ServiceConnection : ServiceConnectionBase
             if (_clientConnectionManager.TryRemoveClientConnection(entity.Key, out var c) && c is ClientConnectionContext connection)
             {
                 // We should not wait until all the clients' lifetime ends to restart another service connection
-                _ = PerformDisconnectAsyncCore(connection);
+                _ = connection.PerformDisconnectAsync();
             }
         }
 
@@ -146,7 +153,7 @@ internal partial class ServiceConnection : ServiceConnectionBase
             connection.Features.Set<IConnectionMigrationFeature>(new ConnectionMigrationFeature(from, ServerId));
         }
 
-        AddClientConnection(connection);
+        TryAddClientConnection(connection);
 
         var isDiagnosticClient = false;
         message.Headers.TryGetValue(Constants.AsrsIsDiagnosticClient, out var isDiagnosticClientValue);
@@ -180,8 +187,7 @@ internal partial class ServiceConnection : ServiceConnectionBase
                 // The close connection message must be the last message, so we could complete the pipe.
                 connection.CompleteIncoming();
             }
-
-            return PerformDisconnectAsyncCore(connection);
+            return connection.PerformDisconnectAsync();
         }
         return Task.CompletedTask;
     }
@@ -308,38 +314,6 @@ internal partial class ServiceConnection : ServiceConnectionBase
         {
             connection.OnCompleted();
         }
-    }
-
-    private void AddClientConnection(ClientConnectionContext connection)
-    {
-        _clientConnectionManager.TryAddClientConnection(connection);
-        _connectionIds.TryAdd(connection.ConnectionId, connection.InstanceId);
-    }
-
-    private async Task PerformDisconnectAsyncCore(ClientConnectionContext connection)
-    {
-        connection.ClearBufferedMessages();
-
-        // In normal close, service already knows the client is closed, no need to be informed.
-        connection.AbortOnClose = false;
-
-        // We're done writing to the application output
-        // Let the connection complete incoming
-        connection.CompleteIncoming();
-
-        // wait for the connection's lifetime task to end
-        var lifetime = connection.LifetimeTask;
-
-        // Wait on the application task to complete
-        // We wait gracefully here to be consistent with self-host SignalR
-        await Task.WhenAny(lifetime, connection.DelayTask);
-
-        if (!lifetime.IsCompleted)
-        {
-            Log.DetectedLongRunningApplicationTask(Logger, connection.ConnectionId);
-        }
-
-        await lifetime;
     }
 
     private Task OnClientInvocationAsync(ClientInvocationMessage message)

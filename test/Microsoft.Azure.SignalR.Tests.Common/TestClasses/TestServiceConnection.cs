@@ -109,4 +109,15 @@ internal class TestServiceConnection(ServiceConnectionStatus status = ServiceCon
 
         return Task.FromResult(true);
     }
+
+    public override bool TryAddClientConnection(IClientConnection connection)
+    {
+        return true;
+    }
+
+    public override bool TryRemoveClientConnection(string connectionId, out IClientConnection connection)
+    {
+        connection = null;
+        return true;
+    }
 }
