@@ -62,8 +62,18 @@ internal partial class ServiceConnection : ServiceConnectionBase
                              IHubProtocolResolver hubProtocolResolver,
                              ServiceConnectionType connectionType = ServiceConnectionType.Default,
                              GracefulShutdownMode mode = GracefulShutdownMode.Off,
-                             bool allowStatefulReconnects = false
-        ) : base(serviceProtocol, serverId, connectionId, endpoint, serviceMessageHandler, serviceEventHandler, connectionType, loggerFactory?.CreateLogger<ServiceConnection>(), mode, allowStatefulReconnects)
+                             bool allowStatefulReconnects = false)
+        : base(serviceProtocol,
+               serverId,
+               connectionId,
+               endpoint,
+               serviceMessageHandler,
+               serviceEventHandler,
+               clientConnectionManager,
+               connectionType,
+               loggerFactory?.CreateLogger<ServiceConnection>(),
+               mode,
+               allowStatefulReconnects)
     {
         _clientConnectionManager = clientConnectionManager;
         _connectionFactory = connectionFactory;

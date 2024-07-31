@@ -50,6 +50,8 @@ internal abstract partial class ServiceConnectionBase : IServiceConnection
 
     private readonly IServiceEventHandler _serviceEventHandler;
 
+    private readonly IClientConnectionManager _clientConnectionManager;
+
     private readonly object _statusLock = new object();
 
     private readonly string _endpointName;
@@ -93,11 +95,11 @@ internal abstract partial class ServiceConnectionBase : IServiceConnection
 
     public Task ConnectionOfflineTask => _serviceConnectionOfflineTcs.Task;
 
-    protected HubServiceEndpoint HubEndpoint { get; }
-
     public string ServerId { get; }
 
     public string ConnectionId { get; }
+
+    protected HubServiceEndpoint HubEndpoint { get; }
 
     protected ILogger Logger { get; }
 
@@ -110,6 +112,7 @@ internal abstract partial class ServiceConnectionBase : IServiceConnection
         HubServiceEndpoint endpoint,
         IServiceMessageHandler serviceMessageHandler,
         IServiceEventHandler serviceEventHandler,
+        IClientConnectionManager clientConnectionManager,
         ServiceConnectionType connectionType,
         ILogger logger,
         GracefulShutdownMode mode = GracefulShutdownMode.Off,
@@ -118,10 +121,11 @@ internal abstract partial class ServiceConnectionBase : IServiceConnection
         ServiceProtocol = serviceProtocol;
         ServerId = serverId;
         ConnectionId = connectionId;
+        HubEndpoint = endpoint;
 
         _connectionType = connectionType;
-        HubEndpoint = endpoint;
         _endpointName = HubEndpoint?.ToString() ?? string.Empty;
+
         if (serviceProtocol != null)
         {
             _cachedPingBytes = serviceProtocol.GetMessageBytes(PingMessage.Instance);
@@ -131,8 +135,10 @@ internal abstract partial class ServiceConnectionBase : IServiceConnection
         }
 
         Logger = logger ?? throw new ArgumentNullException(nameof(logger));
+
         _serviceMessageHandler = serviceMessageHandler;
         _serviceEventHandler = serviceEventHandler;
+        _clientConnectionManager = clientConnectionManager;
     }
 
     public event Action<StatusChange> ConnectionStatusChanged;

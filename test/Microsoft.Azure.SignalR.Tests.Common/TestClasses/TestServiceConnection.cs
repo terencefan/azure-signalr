@@ -16,15 +16,16 @@ internal class TestServiceConnection(ServiceConnectionStatus status = ServiceCon
                                      bool throws = false,
                                      ILogger logger = null,
                                      IServiceMessageHandler serviceMessageHandler = null,
-                                     IServiceEventHandler serviceEventHandler = null) : ServiceConnectionBase(
-                                         new ServiceProtocol(),
-                                         "serverId",
-                                         Guid.NewGuid().ToString(),
-                                         new TestHubServiceEndpoint(),
-                                         serviceMessageHandler,
-                                         serviceEventHandler,
-                                         ServiceConnectionType.Default,
-                                         logger ?? NullLogger.Instance)
+                                     IServiceEventHandler serviceEventHandler = null) 
+    : ServiceConnectionBase(new ServiceProtocol(),
+                            "serverId",
+                            Guid.NewGuid().ToString(),
+                            new TestHubServiceEndpoint(),
+                            serviceMessageHandler,
+                            serviceEventHandler,
+                            new TestClientConnectionManager(),
+                            ServiceConnectionType.Default,
+                            logger ?? NullLogger.Instance)
 {
     private readonly TaskCompletionSource<object> _created = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
 

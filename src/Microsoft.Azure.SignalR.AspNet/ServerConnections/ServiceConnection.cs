@@ -35,27 +35,26 @@ internal partial class ServiceConnection : ServiceConnectionBase
 
     private readonly AckHandler _ackHandler;
 
-    public ServiceConnection(
-        string serverId,
-        string connectionId,
-        HubServiceEndpoint endpoint,
-        IServiceProtocol serviceProtocol,
-        IConnectionFactory connectionFactory,
-        IClientConnectionManagerAspNet clientConnectionManager,
-        ILoggerFactory loggerFactory,
-        IServiceMessageHandler serviceMessageHandler,
-        IServiceEventHandler serviceEventHandler,
-        AckHandler ackHandler,
-        ServiceConnectionType connectionType = ServiceConnectionType.Default)
-        : base(
-              serviceProtocol,
-              serverId,
-              connectionId,
-              endpoint,
-              serviceMessageHandler,
-              serviceEventHandler,
-              connectionType,
-              loggerFactory?.CreateLogger<ServiceConnection>())
+    public ServiceConnection(string serverId,
+                             string connectionId,
+                             HubServiceEndpoint endpoint,
+                             IServiceProtocol serviceProtocol,
+                             IConnectionFactory connectionFactory,
+                             IClientConnectionManagerAspNet clientConnectionManager,
+                             ILoggerFactory loggerFactory,
+                             IServiceMessageHandler serviceMessageHandler,
+                             IServiceEventHandler serviceEventHandler,
+                             AckHandler ackHandler,
+                             ServiceConnectionType connectionType = ServiceConnectionType.Default)
+        : base(serviceProtocol,
+               serverId,
+               connectionId,
+               endpoint,
+               serviceMessageHandler,
+               serviceEventHandler,
+               clientConnectionManager,
+               connectionType,
+               loggerFactory?.CreateLogger<ServiceConnection>())
     {
         _connectionFactory = connectionFactory;
         _clientConnectionManager = clientConnectionManager;
