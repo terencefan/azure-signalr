@@ -81,6 +81,8 @@ internal partial class ClientConnectionContext : ConnectionContext,
 
     private readonly int _closeTimeOutMilliseconds;
 
+    private readonly bool _isMigrated = false;
+
     private int _connectionState = IdleState;
 
     private List<(Action<object> handler, object state)> _heartbeatHandlers;
@@ -91,7 +93,7 @@ internal partial class ClientConnectionContext : ConnectionContext,
 
     private long _receivedBytes;
 
-    public bool IsMigrated { get; private init; } = false;
+    private bool _isHandshakeResponseParsed = false;
 
     public override string ConnectionId { get; set; }
 
@@ -160,7 +162,7 @@ internal partial class ClientConnectionContext : ConnectionContext,
 
         if (serviceMessage.Headers.TryGetValue(Constants.AsrsMigrateFrom, out _))
         {
-            IsMigrated = true;
+            _isMigrated = true;
             Log.MigrationStarting(Logger, ConnectionId);
         }
         else
@@ -256,9 +258,6 @@ internal partial class ClientConnectionContext : ConnectionContext,
     {
         try
         {
-            var isHandshakeResponseParsed = false;
-            var shouldSkipHandshakeResponse = IsMigrated;
-
             while (true)
             {
                 var result = await Application.Input.ReadAsync(OutgoingAborted);
@@ -272,59 +271,13 @@ internal partial class ClientConnectionContext : ConnectionContext,
 
                 if (!buffer.IsEmpty)
                 {
-                    if (!isHandshakeResponseParsed)
+                    try
                     {
-                        var next = buffer;
-                        if (SignalRProtocol.HandshakeProtocol.TryParseResponseMessage(ref next, out var message))
-                        {
-                            isHandshakeResponseParsed = true;
-                            if (!shouldSkipHandshakeResponse)
-                            {
-                                var dataMessage = new ConnectionDataMessage(ConnectionId, buffer.Slice(0, next.Start))
-                                {
-                                    Type = DataMessageType.Handshake
-                                };
-                                var forwardResult = await ForwardMessage(dataMessage);
-                                switch (forwardResult)
-                                {
-                                    case ForwardMessageResult.Success:
-                                        break;
-                                    default:
-                                        return;
-                                }
-                            }
-                            buffer = buffer.Slice(next.Start);
-                        }
-                        else
-                        {
-                            // waiting for handshake response.
-                        }
+                        buffer = await ProcessOutgoingMessagesCoreAsync(protocol, buffer);
                     }
-                    if (isHandshakeResponseParsed)
+                    catch (ForwardMessageException)
                     {
-                        var next = buffer;
-                        while (!buffer.IsEmpty && protocol.TryParseMessage(ref next, FakeInvocationBinder.Instance, out var message))
-                        {
-                            var messageType = message switch
-                            {
-                                SignalRProtocol.HubInvocationMessage => DataMessageType.Invocation,
-                                SignalRProtocol.CloseMessage => DataMessageType.Close,
-                                _ => DataMessageType.Other,
-                            };
-                            var dataMessage = new ConnectionDataMessage(ConnectionId, buffer.Slice(0, next.Start))
-                            {
-                                Type = messageType
-                            };
-                            var forwardResult = await ForwardMessage(dataMessage);
-                            switch (forwardResult)
-                            {
-                                case ForwardMessageResult.Fatal:
-                                    return;
-                                default:
-                                    buffer = next;
-                                    break;
-                            }
-                        }
+                        return;
                     }
                 }
 
@@ -486,6 +439,55 @@ internal partial class ClientConnectionContext : ConnectionContext,
         return header.TryGetValue(Constants.AsrsInstanceId, out var instanceId) ? (string)instanceId : string.Empty;
     }
 
+    private async Task<ReadOnlySequence<byte>> ProcessOutgoingMessagesCoreAsync(SignalRProtocol.IHubProtocol protocol, ReadOnlySequence<byte> buffer)
+    {
+        if (!_isHandshakeResponseParsed)
+        {
+            var next = buffer;
+            if (SignalRProtocol.HandshakeProtocol.TryParseResponseMessage(ref next, out _))
+            {
+                _isHandshakeResponseParsed = true;
+                if (!_isMigrated) // skip handshake response if the client connection is migrated from another server.
+                {
+                    var dataMessage = new ConnectionDataMessage(ConnectionId, buffer.Slice(0, next.Start))
+                    {
+                        Type = DataMessageType.Handshake
+                    };
+                    var forwardResult = await ForwardMessage(dataMessage);
+                    buffer = forwardResult switch
+                    {
+                        ForwardMessageResult.Success => next,
+                        _ => throw new ForwardMessageException(),
+                    };
+                }
+            }
+        }
+
+        if (_isHandshakeResponseParsed)
+        {
+            var next = buffer;
+            while (protocol.TryParseMessage(ref next, FakeInvocationBinder.Instance, out var message))
+            {
+                var dataMessage = new ConnectionDataMessage(ConnectionId, buffer.Slice(0, next.Start))
+                {
+                    Type = message switch
+                    {
+                        SignalRProtocol.HubInvocationMessage => DataMessageType.Invocation,
+                        SignalRProtocol.CloseMessage => DataMessageType.Close,
+                        _ => DataMessageType.Other,
+                    }
+                };
+                var forwardResult = await ForwardMessage(dataMessage);
+                buffer = forwardResult switch
+                {
+                    ForwardMessageResult.Fatal => throw new ForwardMessageException(),
+                    _ => next,
+                };
+            }
+        }
+        return buffer;
+    }
+
     /// <summary>
     /// Forward message to service
     /// </summary>
@@ -624,5 +626,9 @@ internal partial class ClientConnectionContext : ConnectionContext,
         public Type GetReturnType(string invocationId) => typeof(object);
 
         public Type GetStreamItemType(string streamId) => typeof(object);
+    }
+
+    private sealed class ForwardMessageException : Exception
+    {
     }
 }

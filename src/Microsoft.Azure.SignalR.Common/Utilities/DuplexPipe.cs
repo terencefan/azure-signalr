@@ -5,15 +5,15 @@ namespace System.IO.Pipelines
 {
     internal class DuplexPipe : IDuplexPipe
     {
+        public PipeReader Input { get; }
+
+        public PipeWriter Output { get; }
+
         public DuplexPipe(PipeReader reader, PipeWriter writer)
         {
             Input = reader;
             Output = writer;
         }
-
-        public PipeReader Input { get; }
-
-        public PipeWriter Output { get; }
 
         public static DuplexPipePair CreateConnectionPair(PipeOptions inputOptions, PipeOptions outputOptions)
         {
@@ -30,6 +30,7 @@ namespace System.IO.Pipelines
         public readonly struct DuplexPipePair
         {
             public IDuplexPipe Transport { get; }
+
             public IDuplexPipe Application { get; }
 
             public DuplexPipePair(IDuplexPipe transport, IDuplexPipe application)

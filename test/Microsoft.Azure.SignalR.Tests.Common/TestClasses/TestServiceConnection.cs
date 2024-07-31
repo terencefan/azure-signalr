@@ -51,6 +51,17 @@ internal class TestServiceConnection(ServiceConnectionStatus status = ServiceCon
         _connection?.Transport.Input.CancelPendingRead();
     }
 
+    public override Task<bool> SafeWriteAsync(ServiceMessage serviceMessage)
+    {
+        if (_throws)
+        {
+            return Task.FromResult(false);
+        }
+        ReceivedMessages.Enqueue(serviceMessage);
+
+        return Task.FromResult(true);
+    }
+
     protected override Task CleanupClientConnections(string fromInstanceId = null)
     {
         return Task.CompletedTask;
@@ -96,16 +107,5 @@ internal class TestServiceConnection(ServiceConnectionStatus status = ServiceCon
     protected override Task OnClientMessageAsync(ConnectionDataMessage connectionDataMessage)
     {
         return Task.CompletedTask;
-    }
-
-    public override Task<bool> SafeWriteAsync(ServiceMessage serviceMessage)
-    {
-        if (_throws)
-        {
-            return Task.FromResult(false);
-        }
-        ReceivedMessages.Enqueue(serviceMessage);
-
-        return Task.FromResult(true);
     }
 }
