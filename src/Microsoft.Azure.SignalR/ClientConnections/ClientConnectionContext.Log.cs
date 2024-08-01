@@ -32,6 +32,9 @@ internal partial class ClientConnectionContext
         private static readonly Action<ILogger, string, Exception> _detectedLongRunningApplicationTask =
             LoggerMessage.Define<string>(LogLevel.Warning, new EventId(7, "DetectedLongRunningApplicationTask"), "The connection {TransportConnectionId} has a long running application logic that prevents the connection from complete.");
 
+        private static readonly Action<ILogger, string, Exception> _pauseOutgoing =
+            LoggerMessage.Define<string>(LogLevel.Information, new EventId(8, "PauseOutgoingTask"), "The connection {connectionId} has been paused.");
+
         public static void WriteMessageToApplication(ILogger<ServiceConnection> logger, long count, string connectionId)
         {
             _writeMessageToApplication(logger, count, connectionId, null);
@@ -65,6 +68,11 @@ internal partial class ClientConnectionContext
         public static void DetectedLongRunningApplicationTask(ILogger logger, string connectionId)
         {
             _detectedLongRunningApplicationTask(logger, connectionId, null);
+        }
+
+        public static void PauseOutgoing(ILogger logger, string connectionId)
+        {
+            _pauseOutgoing(logger, connectionId, null);
         }
     }
 }

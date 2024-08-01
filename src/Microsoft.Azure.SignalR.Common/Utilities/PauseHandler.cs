@@ -1,0 +1,41 @@
+﻿// Copyright (c) Microsoft. All rights reserved.
+// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+
+using System.Threading;
+using System.Threading.Tasks;
+
+namespace Microsoft.Azure.SignalR;
+
+internal class PauseHandler
+{
+    private readonly SemaphoreSlim _pauseSemaphore = new(1, 1);
+
+    private volatile int _paused = 0;
+
+    private volatile int _pauseAcked = 1;
+
+    public bool ShouldPauseAck => Interlocked.CompareExchange(ref _pauseAcked, 1, 0) == 0;
+
+    public bool Wait() => _pauseSemaphore.Wait(0);
+
+    public void Release() => _pauseSemaphore.Release();
+
+    public Task PauseAsync()
+    {
+        if (Interlocked.CompareExchange(ref _paused, 1, 0) == 0)
+        {
+            Interlocked.Exchange(ref _pauseAcked, 0);
+            return _pauseSemaphore.WaitAsync();
+        }
+        return Task.CompletedTask;
+    }
+
+    public Task ResumeAsync()
+    {
+        if (Interlocked.CompareExchange(ref _paused, 0, 1) == 1)
+        {
+            _pauseSemaphore.Release();
+        }
+        return Task.CompletedTask;
+    }
+}

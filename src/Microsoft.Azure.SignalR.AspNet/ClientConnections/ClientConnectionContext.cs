@@ -1,6 +1,7 @@
 ﻿// Copyright (c) Microsoft. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Channels;
@@ -46,6 +47,21 @@ internal class ClientConnectionContext : IClientConnection
     public void CancelPendingRead()
     {
         _source.Cancel();
+    }
+
+    public Task PauseAsync()
+    {
+        throw new NotImplementedException();
+    }
+
+    public Task PauseAckAsync()
+    {
+        throw new NotImplementedException();
+    }
+
+    public Task ResumeAsync()
+    {
+        throw new NotImplementedException();
     }
 
     private string GetInstanceId(IDictionary<string, StringValues> header)

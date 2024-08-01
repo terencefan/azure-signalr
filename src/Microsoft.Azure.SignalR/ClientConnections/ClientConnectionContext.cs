@@ -71,6 +71,8 @@ internal partial class ClientConnectionContext : ConnectionContext,
 
     private readonly TaskCompletionSource<object> _connectionEndTcs = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
 
+    private readonly TaskCompletionSource<object> _hanshakeCompleteTcs = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
+
     private readonly CancellationTokenSource _abortOutgoingCts = new CancellationTokenSource();
 
     private readonly object _heartbeatLock = new object();
@@ -83,6 +85,8 @@ internal partial class ClientConnectionContext : ConnectionContext,
 
     private readonly bool _isMigrated = false;
 
+    private readonly PauseHandler _pauseHandler = new PauseHandler();
+
     private int _connectionState = IdleState;
 
     private List<(Action<object> handler, object state)> _heartbeatHandlers;
@@ -92,8 +96,6 @@ internal partial class ClientConnectionContext : ConnectionContext,
     private long _lastMessageReceivedAt;
 
     private long _receivedBytes;
-
-    private bool _isHandshakeResponseParsed = false;
 
     public override string ConnectionId { get; set; }
 
@@ -121,6 +123,8 @@ internal partial class ClientConnectionContext : ConnectionContext,
     public ClaimsPrincipal User { get; set; }
 
     public Task LifetimeTask => _connectionEndTcs.Task;
+
+    public Task HandshakeResponseTask => _hanshakeCompleteTcs.Task;
 
     public HttpContext HttpContext { get; set; }
 
@@ -243,6 +247,20 @@ internal partial class ClientConnectionContext : ConnectionContext,
         }
     }
 
+    public Task PauseAsync() => _pauseHandler.PauseAsync();
+
+    public Task PauseAckAsync()
+    {
+        if (_pauseHandler.ShouldPauseAck)
+        {
+            var message = new ConnectionFlowControlMessage(ConnectionId, ConnectionFlowControlOperation.PauseAck);
+            return ServiceConnection.WriteAsync(message);
+        }
+        return Task.CompletedTask;
+    }
+
+    public Task ResumeAsync() => _pauseHandler.ResumeAsync();
+
     internal static bool TryGetRemoteIpAddress(IHeaderDictionary headers, out IPAddress address)
     {
         var forwardedFor = headers.GetCommaSeparatedValues("X-Forwarded-For");
@@ -271,12 +289,11 @@ internal partial class ClientConnectionContext : ConnectionContext,
 
                 if (!buffer.IsEmpty)
                 {
-                    if (!_isHandshakeResponseParsed)
+                    if (!HandshakeResponseTask.IsCompleted)
                     {
                         var next = buffer;
                         if (SignalRProtocol.HandshakeProtocol.TryParseResponseMessage(ref next, out var message))
                         {
-                            _isHandshakeResponseParsed = true;
                             if (_isMigrated)
                             {
                                 // simply skip the handshake response.
@@ -295,29 +312,44 @@ internal partial class ClientConnectionContext : ConnectionContext,
                                     _ => throw new ForwardMessageException(forwardResult),
                                 };
                             }
+                            _hanshakeCompleteTcs.TrySetResult(null);
                         }
                     }
-                    if (_isHandshakeResponseParsed)
+                    if (HandshakeResponseTask.IsCompleted)
                     {
                         var next = buffer;
                         while (!buffer.IsEmpty && protocol.TryParseMessage(ref next, FakeInvocationBinder.Instance, out var message))
                         {
-                            var messageType = message switch
+                            if (!_pauseHandler.Wait())
                             {
-                                SignalRProtocol.HubInvocationMessage => DataMessageType.Invocation,
-                                SignalRProtocol.CloseMessage => DataMessageType.Close,
-                                _ => DataMessageType.Other,
-                            };
-                            var dataMessage = new ConnectionDataMessage(ConnectionId, buffer.Slice(0, next.Start))
+                                Log.PauseOutgoing(Logger, ConnectionId);
+                                await Task.Delay(StaticRandom.Next(500, 1500));
+                                break;
+                            }
+
+                            try
                             {
-                                Type = messageType
-                            };
-                            var forwardResult = await ForwardMessage(dataMessage);
-                            buffer = forwardResult switch
+                                var messageType = message switch
+                                {
+                                    SignalRProtocol.HubInvocationMessage => DataMessageType.Invocation,
+                                    SignalRProtocol.CloseMessage => DataMessageType.Close,
+                                    _ => DataMessageType.Other,
+                                };
+                                var dataMessage = new ConnectionDataMessage(ConnectionId, buffer.Slice(0, next.Start))
+                                {
+                                    Type = messageType
+                                };
+                                var forwardResult = await ForwardMessage(dataMessage);
+                                buffer = forwardResult switch
+                                {
+                                    ForwardMessageResult.Fatal => throw new ForwardMessageException(forwardResult),
+                                    _ => next,
+                                };
+                            }
+                            finally
                             {
-                                ForwardMessageResult.Fatal => throw new ForwardMessageException(forwardResult),
-                                _ => next,
-                            };
+                                _pauseHandler.Release();
+                            }
                         }
                     }
                 }
