@@ -363,6 +363,7 @@ internal abstract partial class ServiceConnectionBase : IServiceConnection
             AckMessage ackMessage => OnAckMessageAsync(ackMessage),
             ServiceEventMessage eventMessage => OnEventMessageAsync(eventMessage),
             AccessKeyResponseMessage keyMessage => OnAccessKeyMessageAsync(keyMessage),
+            ConnectionFlowControlMessage flowControlMessage => OnFlowControlMessageAsync(flowControlMessage),
             _ => Task.CompletedTask,
         };
     }
@@ -418,6 +419,77 @@ internal abstract partial class ServiceConnectionBase : IServiceConnection
             }
         }
         return Task.CompletedTask;
+    }
+
+    /// <summary>
+    /// Set the server connection offline.
+    /// </summary>
+    /// <returns></returns>
+    private Task OfflineAsync()
+    {
+        Status = ServiceConnectionStatus.Disconnected;
+        Log.ReceivedConnectionOffline(Logger, ConnectionId);
+        return Task.CompletedTask;
+    }
+
+    private async Task PauseClientConnectionAsync(IClientConnection clientConnection)
+    {
+        await clientConnection.PauseAsync();
+        await clientConnection.PauseAckAsync();
+    }
+
+    private Task ResumeClientConnectionAsync(IClientConnection clientConnection)
+    {
+        if (clientConnection.ServiceConnection == this)
+        {
+            return clientConnection.ResumeAsync();
+        }
+
+        if (clientConnection.ServiceConnection is ServiceConnectionBase serviceConnection)
+        {
+            serviceConnection.TryRemoveClientConnection(clientConnection.ConnectionId, out _);
+        }
+        if (TryAddClientConnection(clientConnection))
+        {
+            clientConnection.ServiceConnection = this;
+            return clientConnection.ResumeAsync();
+        }
+        return Task.CompletedTask;
+    }
+
+    private Task OnFlowControlMessageAsync(ConnectionFlowControlMessage flowControlMessage)
+    {
+        if (flowControlMessage.ConnectionType == ConnectionType.Server)
+        {
+            if (string.Equals(ConnectionId, flowControlMessage.ConnectionId))
+            {
+                return flowControlMessage.Operation switch
+                {
+                    ConnectionFlowControlOperation.Offline => OfflineAsync(),
+                    _ => throw new InvalidOperationException($"Opereration {flowControlMessage.Operation} is invalid on server connections."),
+                };
+            }
+        }
+        else if (flowControlMessage.ConnectionType == ConnectionType.Client)
+        {
+            if (_clientConnectionManager.TryGetClientConnection(flowControlMessage.ConnectionId, out var clientConnection))
+            {
+                if (flowControlMessage.Operation == ConnectionFlowControlOperation.Pause)
+                {
+                    _ = PauseClientConnectionAsync(clientConnection);
+                }
+                else if (flowControlMessage.Operation == ConnectionFlowControlOperation.Resume)
+                {
+                    _ = ResumeClientConnectionAsync(clientConnection);
+                }
+                else
+                {
+                    throw new InvalidOperationException($"Opereration {flowControlMessage.Operation} is invalid on client connections.");
+                }
+            }
+            return Task.CompletedTask;
+        }
+        throw new NotImplementedException($"Unsupported connection type: {flowControlMessage.ConnectionType}");
     }
 
     private async Task<ConnectionContext> EstablishConnectionAsync(string target)

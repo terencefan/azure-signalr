@@ -78,6 +78,9 @@ internal abstract partial class ServiceConnectionBase
         private static readonly Action<ILogger, string, string, Exception> _sendAccessKeyRequestMessageFailed =
             LoggerMessage.Define<string, string>(LogLevel.Warning, new EventId(33, "SendAccessKeyRequestFailed"), "Cannot send AccessKeyRequestMessage to '{Endpoint}' via server connections, authentication failures may occur if this warning continues. Error detail: {Message}");
 
+        private static readonly Action<ILogger, string, Exception> _receivedConnectionOffline =
+            LoggerMessage.Define<string>(LogLevel.Information, new EventId(34, "ReceivedConnectionOffline"), "Received server connection offline message: {connectionId}");
+
         public static void FailedToWrite(ILogger logger, ulong? tracingId, string serviceConnectionId, Exception exception)
         {
             _failedToWrite(logger, tracingId, exception.Message, serviceConnectionId, null);
@@ -189,6 +192,11 @@ internal abstract partial class ServiceConnectionBase
         public static void ReceivedInstanceOfflinePing(ILogger logger, string instanceId)
         {
             _receivedInstanceOfflinePing(logger, instanceId, null);
+        }
+
+        public static void ReceivedConnectionOffline(ILogger logger, string connectionId)
+        {
+            _receivedConnectionOffline(logger, connectionId, null);
         }
     }
 }

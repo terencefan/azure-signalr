@@ -294,12 +294,11 @@ internal partial class ServiceConnection : ServiceConnectionBase
             if (connection.AbortOnClose)
             {
                 // Inform the Service that we will remove the client because SignalR told us it is disconnected.
-                var serviceMessage =
-                    new CloseConnectionMessage(connection.ConnectionId, errorMessage: exception?.Message);
+                var closeConnectionMessage = new CloseConnectionMessage(connection.ConnectionId, errorMessage: exception?.Message);
 
                 // when it fails, it means the underlying connection is dropped
                 // service is responsible for closing the client connections in this case and there is no need to throw
-                await SafeWriteAsync(serviceMessage);
+                await SafeWriteAsync(closeConnectionMessage);
                 Log.CloseConnection(Logger, connection.ConnectionId);
             }
 

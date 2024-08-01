@@ -19,7 +19,11 @@ internal sealed class TestServiceConnectionContainer : ServiceConnectionContaine
 
     public List<IServiceConnection> Connections => ServiceConnections;
 
-    public TestServiceConnectionContainer(List<IServiceConnection> serviceConnections, HubServiceEndpoint endpoint = null, AckHandler ackHandler = null, IServiceConnectionFactory factory = null, ILogger logger = null)
+    public TestServiceConnectionContainer(List<IServiceConnection> serviceConnections,
+                                          HubServiceEndpoint endpoint = null,
+                                          AckHandler ackHandler = null,
+                                          IServiceConnectionFactory factory = null,
+                                          ILogger logger = null)
             : base(factory, 0, endpoint, serviceConnections, ackHandler: ackHandler, logger: logger ?? NullLogger.Instance)
     {
     }

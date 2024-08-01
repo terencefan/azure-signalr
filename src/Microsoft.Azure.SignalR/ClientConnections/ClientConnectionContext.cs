@@ -255,11 +255,11 @@ internal partial class ClientConnectionContext : ConnectionContext,
 
     public Task PauseAckAsync()
     {
-        if (_pauseHandler.ShouldPauseAck)
+        if (_pauseHandler.ShouldReplyAck)
         {
+            Log.OutgoingTaskPauseAck(Logger, ConnectionId);
             var message = new ConnectionFlowControlMessage(ConnectionId, ConnectionFlowControlOperation.PauseAck);
             var task = ServiceConnection.WriteAsync(message);
-            Log.OutgoingTaskPauseAck(Logger, ConnectionId);
             return task;
         }
         return Task.CompletedTask;

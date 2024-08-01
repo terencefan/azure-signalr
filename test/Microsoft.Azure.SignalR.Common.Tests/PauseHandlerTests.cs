@@ -12,17 +12,17 @@ public class PauseHandlerTests
     public async Task TestPauseAndResume()
     {
         var handler = new PauseHandler();
-        Assert.False(handler.ShouldPauseAck);
+        Assert.False(handler.ShouldReplyAck);
 
         await handler.PauseAsync();
         Assert.False(await handler.WaitAsync(100, default));
 
-        Assert.True(handler.ShouldPauseAck);
-        Assert.False(handler.ShouldPauseAck); // ack only once
+        Assert.True(handler.ShouldReplyAck);
+        Assert.False(handler.ShouldReplyAck); // ack only once
 
         await handler.PauseAsync(); // pause can be called multiple times.
         Assert.False(await handler.WaitAsync(100, default));
-        Assert.False(handler.ShouldPauseAck); // already acked previously
+        Assert.False(handler.ShouldReplyAck); // already acked previously
 
         await handler.ResumeAsync();
         Assert.True(await handler.WaitAsync(100, default));

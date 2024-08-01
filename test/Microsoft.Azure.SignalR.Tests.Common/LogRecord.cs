@@ -10,6 +10,7 @@ namespace Microsoft.Azure.SignalR.Tests.Common
     public class LogRecord
     {
         public DateTime Timestamp { get; }
+
         public WriteContext Write { get; }
 
         public LogRecord(DateTime timestamp, WriteContext write)

@@ -28,7 +28,7 @@ internal interface IClientConnection
     /// <summary>
     /// The server connection associated with this client connection.
     /// </summary>
-    IServiceConnection? ServiceConnection { get; }
+    IServiceConnection? ServiceConnection { get; set; }
 
     Task PauseAsync();
 
