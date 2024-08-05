@@ -320,10 +320,10 @@ internal partial class ClientConnectionContext : ConnectionContext,
                         var next = buffer;
                         while (!buffer.IsEmpty && protocol.TryParseMessage(ref next, FakeInvocationBinder.Instance, out var message))
                         {
-                            if (!_pauseHandler.Wait())
+                            if (!await _pauseHandler.WaitAsync(StaticRandom.Next(500, 1500), OutgoingAborted))
                             {
                                 Log.PauseOutgoing(Logger, ConnectionId);
-                                await Task.Delay(StaticRandom.Next(500, 1500));
+                                buffer = buffer.Slice(0);
                                 break;
                             }
 

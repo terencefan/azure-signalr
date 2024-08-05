@@ -16,7 +16,7 @@ internal class PauseHandler
 
     public bool ShouldPauseAck => Interlocked.CompareExchange(ref _pauseAcked, 1, 0) == 0;
 
-    public bool Wait() => _pauseSemaphore.Wait(0);
+    public async Task<bool> WaitAsync(int ms, CancellationToken ctoken) => _pauseSemaphore.Wait(0, ctoken) || await _pauseSemaphore.WaitAsync(ms, ctoken);
 
     public void Release() => _pauseSemaphore.Release();
 
