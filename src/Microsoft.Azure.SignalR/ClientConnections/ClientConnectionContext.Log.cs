@@ -32,8 +32,14 @@ internal partial class ClientConnectionContext
         private static readonly Action<ILogger, string, Exception> _detectedLongRunningApplicationTask =
             LoggerMessage.Define<string>(LogLevel.Warning, new EventId(7, "DetectedLongRunningApplicationTask"), "The connection {TransportConnectionId} has a long running application logic that prevents the connection from complete.");
 
-        private static readonly Action<ILogger, string, Exception> _pauseOutgoing =
-            LoggerMessage.Define<string>(LogLevel.Information, new EventId(8, "PauseOutgoingTask"), "The connection {connectionId} has been paused.");
+        private static readonly Action<ILogger, string, Exception> _outgoingTaskPaused =
+            LoggerMessage.Define<string>(LogLevel.Information, new EventId(8, "OutgoingTaskPaused"), "Outgoing messages for connection {connectionId} have been paused.");
+
+        private static readonly Action<ILogger, string, Exception> _outgoingTaskResume =
+            LoggerMessage.Define<string>(LogLevel.Information, new EventId(9, "OutgoingTaskResume"), "Outgoing messages for connection {connectionId} are now resumed.");
+
+        private static readonly Action<ILogger, string, Exception> _outgoingTaskPauseAck =
+            LoggerMessage.Define<string>(LogLevel.Information, new EventId(10, "OutgoingTaskPauseAck"), "Acknowlege the pause request for connection {connectionId}.");
 
         public static void WriteMessageToApplication(ILogger<ServiceConnection> logger, long count, string connectionId)
         {
@@ -70,9 +76,19 @@ internal partial class ClientConnectionContext
             _detectedLongRunningApplicationTask(logger, connectionId, null);
         }
 
-        public static void PauseOutgoing(ILogger logger, string connectionId)
+        public static void OutgoingTaskPaused(ILogger logger, string connectionId)
         {
-            _pauseOutgoing(logger, connectionId, null);
+            _outgoingTaskPaused(logger, connectionId, null);
+        }
+
+        public static void OutgoingTaskResume(ILogger logger, string connectionId)
+        {
+            _outgoingTaskResume(logger, connectionId, null);
+        }
+
+        public static void OutgoingTaskPauseAck(ILogger logger, string connectionId)
+        {
+            _outgoingTaskPauseAck(logger, connectionId, null);
         }
     }
 }

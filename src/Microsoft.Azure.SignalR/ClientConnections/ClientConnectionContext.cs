@@ -247,19 +247,29 @@ internal partial class ClientConnectionContext : ConnectionContext,
         }
     }
 
-    public Task PauseAsync() => _pauseHandler.PauseAsync();
+    public Task PauseAsync()
+    {
+        Log.OutgoingTaskPaused(Logger, ConnectionId);
+        return _pauseHandler.PauseAsync();
+    }
 
     public Task PauseAckAsync()
     {
         if (_pauseHandler.ShouldPauseAck)
         {
             var message = new ConnectionFlowControlMessage(ConnectionId, ConnectionFlowControlOperation.PauseAck);
-            return ServiceConnection.WriteAsync(message);
+            var task = ServiceConnection.WriteAsync(message);
+            Log.OutgoingTaskPauseAck(Logger, ConnectionId);
+            return task;
         }
         return Task.CompletedTask;
     }
 
-    public Task ResumeAsync() => _pauseHandler.ResumeAsync();
+    public Task ResumeAsync()
+    {
+        Log.OutgoingTaskResume(Logger, ConnectionId);
+        return _pauseHandler.ResumeAsync();
+    }
 
     internal static bool TryGetRemoteIpAddress(IHeaderDictionary headers, out IPAddress address)
     {
@@ -322,7 +332,7 @@ internal partial class ClientConnectionContext : ConnectionContext,
                         {
                             if (!await _pauseHandler.WaitAsync(StaticRandom.Next(500, 1500), OutgoingAborted))
                             {
-                                Log.PauseOutgoing(Logger, ConnectionId);
+                                Log.OutgoingTaskPaused(Logger, ConnectionId);
                                 buffer = buffer.Slice(0);
                                 break;
                             }

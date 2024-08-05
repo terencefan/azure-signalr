@@ -15,19 +15,19 @@ public class PauseHandlerTests
         Assert.False(handler.ShouldPauseAck);
 
         await handler.PauseAsync();
-        Assert.False(await handler.WaitAsync());
+        Assert.False(await handler.WaitAsync(100, default));
 
         Assert.True(handler.ShouldPauseAck);
         Assert.False(handler.ShouldPauseAck); // ack only once
 
         await handler.PauseAsync(); // pause can be called multiple times.
-        Assert.False(await handler.WaitAsync());
+        Assert.False(await handler.WaitAsync(100, default));
         Assert.False(handler.ShouldPauseAck); // already acked previously
 
         await handler.ResumeAsync();
-        Assert.True(await handler.WaitAsync());
-        Assert.False(await handler.WaitAsync()); // only 1 parallel
+        Assert.True(await handler.WaitAsync(100, default));
+        Assert.False(await handler.WaitAsync(100, default)); // only 1 parallel
         handler.Release();
-        Assert.True(await handler.WaitAsync());
+        Assert.True(await handler.WaitAsync(100, default));
     }
 }
