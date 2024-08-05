@@ -207,8 +207,8 @@ public class ClientConnectionContextFacts : VerifiableLoggedTest
     {
         using (StartVerifiableLog(out var loggerFactory, LogLevel.Information, logChecker: records =>
         {
-            return records.Where(r => r.Write.EventId == 8).Any() && 
-                   records.Where(r => r.Write.EventId == 9).Single() != null;
+            return records.Any(r => r.Write.EventId == 8) && 
+                   records.Single(r => r.Write.EventId == 9) != null;
         }))
         {
             using var serviceConnection = new TestServiceConnection();
@@ -265,7 +265,7 @@ public class ClientConnectionContextFacts : VerifiableLoggedTest
     {
         using (StartVerifiableLog(out var loggerFactory, LogLevel.Information, logChecker: records =>
         {
-            return records.Where(r => r.Write.EventId == 10).Single() != null;
+            return records.Single(r => r.Write.EventId == 10) != null;
         }))
         {
             using var serviceConnection = new TestServiceConnection();
