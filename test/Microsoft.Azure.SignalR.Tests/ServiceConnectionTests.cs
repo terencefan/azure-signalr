@@ -38,7 +38,7 @@ public class ServiceConnectionTests : VerifiableLoggedTest
     {
         using (StartVerifiableLog(out var loggerFactory, LogLevel.Information, logChecker: logs =>
         {
-            return logs.Where(x => x.Write.EventId.Id == 34).Single() != null;
+            return logs.Where(x => x.Write.EventId.Name == "ReceivedConnectionOffline").Single() != null;
         }))
         {
             var ccm = new TestClientConnectionManager();
@@ -80,8 +80,8 @@ public class ServiceConnectionTests : VerifiableLoggedTest
     {
         using (StartVerifiableLog(out var loggerFactory, LogLevel.Information, logChecker: logs =>
         {
-            return logs.Where(x => x.Write.EventId.Id == 8).Single() != null
-                && logs.Where(x => x.Write.EventId.Id == 10).Single() != null;
+            return logs.Where(x => x.Write.EventId.Name == "OutgoingTaskPaused").Count() == 2
+                && logs.Where(x => x.Write.EventId.Name == "OutgoingTaskPauseAck").Single() != null;
         }))
         {
             var ccm = new TestClientConnectionManager();
@@ -109,8 +109,9 @@ public class ServiceConnectionTests : VerifiableLoggedTest
             // wait for a client connection
             var clientConnection = await CreateClientConnectionAsync(serviceProtocol, hubProtocol, ccm, transportConnection);
 
-            // send pause message
+            // send 2 pause message, expect only 1 pause ack message
             var pauseMessage = new ConnectionFlowControlMessage(clientConnection.ConnectionId, ConnectionFlowControlOperation.Pause, ConnectionType.Client);
+            await transportConnection.Application.Output.WriteAsync(serviceProtocol.GetMessageBytes(pauseMessage));
             await transportConnection.Application.Output.WriteAsync(serviceProtocol.GetMessageBytes(pauseMessage));
 
             // read pause ack message
@@ -135,7 +136,7 @@ public class ServiceConnectionTests : VerifiableLoggedTest
     {
         using (StartVerifiableLog(out var loggerFactory, LogLevel.Information, logChecker: logs =>
         {
-            return logs.Where(x => x.Write.EventId.Id == 9).Single() != null;
+            return logs.Where(x => x.Write.EventId.Name == "OutgoingTaskResume").Single() != null;
         }))
         {
             var ccm = new TestClientConnectionManager();
