@@ -81,7 +81,7 @@ public class ServiceConnectionTests : VerifiableLoggedTest
         using (StartVerifiableLog(out var loggerFactory, LogLevel.Information, logChecker: logs =>
         {
             return logs.Where(x => x.Write.EventId.Name == "OutgoingTaskPaused").Count() == 2
-                && logs.Where(x => x.Write.EventId.Name == "OutgoingTaskPauseAck").Single() != null;
+                && logs.Where(x => x.Write.EventId.Name == "OutgoingTaskPauseAck").SingleOrDefault() != null;
         }))
         {
             var ccm = new TestClientConnectionManager();
@@ -136,7 +136,7 @@ public class ServiceConnectionTests : VerifiableLoggedTest
     {
         using (StartVerifiableLog(out var loggerFactory, LogLevel.Information, logChecker: logs =>
         {
-            return logs.Where(x => x.Write.EventId.Name == "OutgoingTaskResume").Single() != null;
+            return logs.Where(x => x.Write.EventId.Name == "OutgoingTaskResume").SingleOrDefault() != null;
         }))
         {
             var ccm = new TestClientConnectionManager();
