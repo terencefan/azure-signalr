@@ -17,6 +17,10 @@ namespace Microsoft.Azure.SignalR
 
         public const string AsrsIsDiagnosticClient = "Asrs-Is-Diagnostic-Client";
 
+        public const string IngressDenied = "Nginx denied the access, please check your Networking settings.";
+
+        public const string RuntimeDenied = "Azure SignalR service denied the access, please check your Access control (IAM) settings.";
+
         public static class Keys
         {
             public const string AzureSignalRSectionKey = "Azure:SignalR";

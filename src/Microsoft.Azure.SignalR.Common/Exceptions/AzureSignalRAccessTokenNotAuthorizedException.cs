@@ -8,6 +8,7 @@ namespace Microsoft.Azure.SignalR.Common
     /// <summary>
     /// The exception throws when AccessKey is not authorized.
     /// </summary>
+    [Obsolete]
     public class AzureSignalRAccessTokenNotAuthorizedException : AzureSignalRException
     {
         private const string Postfix = " appears to lack the permission to generate access tokens, see innerException for more details.";

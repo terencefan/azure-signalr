@@ -14,7 +14,6 @@ using Azure.Core;
 
 using Microsoft.Azure.SignalR.Common;
 using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
 
 namespace Microsoft.Azure.SignalR;
 
@@ -82,6 +81,7 @@ internal class MicrosoftEntraAccessKey : AccessKey
         var authorizeUri = (serverEndpoint ?? endpoint).Append("/api/v1/auth/accessKey");
         GetAccessKeyUrl = authorizeUri.AbsoluteUri;
         TokenCredential = credential;
+
         _httpClientFactory = httpClientFactory ?? HttpClientFactory.Instance;
     }
 
@@ -117,7 +117,7 @@ internal class MicrosoftEntraAccessKey : AccessKey
             await task;
             return IsAuthorized
                 ? await base.GenerateAccessTokenAsync(audience, claims, lifetime, algorithm, ctoken)
-                : throw new AzureSignalRAccessTokenNotAuthorizedException(TokenCredential.GetType().Name, LastException);
+                : throw new AzureSignalRAccessKeyNotAvailableException(TokenCredential, LastException);
         }
         else
         {
@@ -198,6 +198,7 @@ internal class MicrosoftEntraAccessKey : AccessKey
         {
             HttpStatusCode.BadRequest => new AzureSignalRInvalidArgumentException(requestUri, innerException, detail),
             HttpStatusCode.Unauthorized => new AzureSignalRUnauthorizedException(requestUri, innerException),
+            HttpStatusCode.Forbidden => new AzureSignalRForbiddenException(requestUri, innerException),
             HttpStatusCode.NotFound => new AzureSignalRInaccessibleEndpointException(requestUri, innerException),
             _ => new AzureSignalRRuntimeException(requestUri, innerException),
         };
@@ -221,12 +222,18 @@ internal class MicrosoftEntraAccessKey : AccessKey
 
     private async Task<bool> HandleHttpResponseAsync(HttpResponseMessage response)
     {
-        if (response.StatusCode != HttpStatusCode.OK)
+        var content = string.Empty;
+        if (response.StatusCode == HttpStatusCode.Forbidden)
+        {
+            content = await response.Content.ReadAsStringAsync();
+            response.ReasonPhrase = content.Contains("nginx") ? Constants.IngressDenied : Constants.RuntimeDenied;
+            return false;
+        }
+        else if (response.StatusCode != HttpStatusCode.OK)
         {
             return false;
         }
 
-        var content = await response.Content.ReadAsStringAsync();
         var obj = JsonConvert.DeserializeObject<AccessKeyResponse>(content) ?? throw new AzureSignalRException("Access key response is not expected.");
 
         if (string.IsNullOrEmpty(obj.KeyId))
