@@ -1,4 +1,4 @@
-﻿﻿// Copyright (c) Microsoft. All rights reserved.
+﻿// Copyright (c) Microsoft. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System;
@@ -30,23 +30,24 @@ internal partial class MicrosoftEntraAccessKey
 
     internal sealed class RestClient
     {
+        private static readonly IHttpClientFactory DefaultHttpClientFactory = HttpClientFactory.Instance;
+
         private readonly IHttpClientFactory _httpClientFactory;
 
-        public RestClient(IHttpClientFactory httpClientFactory)
+        public RestClient(IHttpClientFactory? httpClientFactory = null)
         {
-            _httpClientFactory = httpClientFactory;
+            _httpClientFactory = httpClientFactory ?? DefaultHttpClientFactory;
         }
 
-        public Task SendAsync(
-            RestApiEndpoint api,
-            HttpMethod httpMethod,
-            Func<HttpResponseMessage, Task<bool>>? handleExpectedResponseAsync = null,
-            CancellationToken cancellationToken = default)
+        public Task SendAsync(RestApiEndpoint api,
+                              HttpMethod httpMethod,
+                              Func<HttpResponseMessage, Task<bool>>? handleExpectedResponseAsync = null,
+                              CancellationToken cancellationToken = default)
         {
             return SendAsyncCore(Constants.HttpClientNames.UserDefault, api, httpMethod, handleExpectedResponseAsync, cancellationToken);
         }
 
-        private async Task ThrowExceptionOnResponseFailureAsync(HttpResponseMessage response)
+        private static async Task ThrowExceptionOnResponseFailureAsync(HttpResponseMessage response)
         {
             if (response.IsSuccessStatusCode)
             {
@@ -66,33 +67,33 @@ internal partial class MicrosoftEntraAccessKey
             {
                 HttpStatusCode.BadRequest => new AzureSignalRInvalidArgumentException(response.RequestMessage?.RequestUri?.ToString(), innerException, detail),
                 HttpStatusCode.Unauthorized => new AzureSignalRUnauthorizedException(response.RequestMessage?.RequestUri?.ToString(), innerException),
+                HttpStatusCode.Forbidden => await AzureSignalRForbiddenException.BuildAsync(response, innerException),
                 HttpStatusCode.NotFound => new AzureSignalRInaccessibleEndpointException(response.RequestMessage?.RequestUri?.ToString(), innerException),
                 _ => new AzureSignalRRuntimeException(response.RequestMessage?.RequestUri?.ToString(), innerException),
             };
         }
 
-        private async Task SendAsyncCore(
-            string httpClientName,
-            RestApiEndpoint api,
-            HttpMethod httpMethod,
-            Func<HttpResponseMessage, Task<bool>>? handleExpectedResponseAsync = null,
-            CancellationToken cancellationToken = default)
+        private async Task SendAsyncCore(string httpClientName,
+                                         RestApiEndpoint api,
+                                         HttpMethod httpMethod,
+                                         Func<HttpResponseMessage, Task<bool>>? handleExpectedResponseAsync = null,
+                                         CancellationToken cancellationToken = default)
         {
             using var httpClient = _httpClientFactory.CreateClient(httpClientName);
-            using var request = BuildRequest(api, httpMethod);
+            using var request = GenerateHttpRequest(api.Audience, httpMethod, api.Token);
 
             try
             {
                 using var response = await httpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
                 if (handleExpectedResponseAsync == null)
                 {
-                    await ThrowExceptionOnResponseFailureAsync(response);
+                    await RestClient.ThrowExceptionOnResponseFailureAsync(response);
                 }
                 else
                 {
                     if (!await handleExpectedResponseAsync(response))
                     {
-                        await ThrowExceptionOnResponseFailureAsync(response);
+                        await RestClient.ThrowExceptionOnResponseFailureAsync(response);
                     }
                 }
             }
@@ -100,11 +101,6 @@ internal partial class MicrosoftEntraAccessKey
             {
                 throw new AzureSignalRException($"An error happened when making request to {request.RequestUri}", ex);
             }
-        }
-
-        private HttpRequestMessage BuildRequest(RestApiEndpoint api, HttpMethod httpMethod)
-        {
-            return GenerateHttpRequest(api.Audience, httpMethod, api.Token);
         }
 
         private HttpRequestMessage GenerateHttpRequest(string url, HttpMethod httpMethod, string tokenString)

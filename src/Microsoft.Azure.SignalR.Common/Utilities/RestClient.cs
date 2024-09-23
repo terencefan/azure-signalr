@@ -9,6 +9,7 @@ using System.Net.Http.Headers;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Azure.Core;
 using Azure.Core.Serialization;
 using Microsoft.Azure.SignalR.Common;
 using Microsoft.Extensions.Primitives;
@@ -82,7 +83,7 @@ namespace Microsoft.Azure.SignalR
             return SendAsyncCore(Constants.HttpClientNames.MessageResilient, api, httpMethod, methodName, args, handleExpectedResponse == null ? null : response => Task.FromResult(handleExpectedResponse(response)), cancellationToken);
         }
 
-        private async Task ThrowExceptionOnResponseFailureAsync(HttpResponseMessage response)
+        private async Task ThrowExceptionOnResponseFailureAsync(HttpRequestMessage request, HttpResponseMessage response)
         {
             if (response.IsSuccessStatusCode)
             {
@@ -101,7 +102,8 @@ namespace Microsoft.Azure.SignalR
             throw response.StatusCode switch
             {
                 HttpStatusCode.BadRequest => new AzureSignalRInvalidArgumentException(response.RequestMessage?.RequestUri?.ToString(), innerException, detail),
-                HttpStatusCode.Unauthorized => new AzureSignalRUnauthorizedException(response.RequestMessage?.RequestUri?.ToString(), innerException),
+                HttpStatusCode.Unauthorized => await AzureSignalRUnauthorizedException.BuildAsync(request, innerException),
+                HttpStatusCode.Forbidden => await AzureSignalRForbiddenException.BuildAsync(response, innerException),
                 HttpStatusCode.NotFound => new AzureSignalRInaccessibleEndpointException(response.RequestMessage?.RequestUri?.ToString(), innerException),
                 _ => new AzureSignalRRuntimeException(response.RequestMessage?.RequestUri?.ToString(), innerException),
             };
@@ -124,13 +126,13 @@ namespace Microsoft.Azure.SignalR
                 using var response = await httpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
                 if (handleExpectedResponseAsync == null)
                 {
-                    await ThrowExceptionOnResponseFailureAsync(response);
+                    await ThrowExceptionOnResponseFailureAsync(request, response);
                 }
                 else
                 {
                     if (!await handleExpectedResponseAsync(response))
                     {
-                        await ThrowExceptionOnResponseFailureAsync(response);
+                        await ThrowExceptionOnResponseFailureAsync(request, response);
                     }
                 }
             }

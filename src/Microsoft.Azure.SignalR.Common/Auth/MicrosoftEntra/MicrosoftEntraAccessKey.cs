@@ -17,6 +17,8 @@ using Newtonsoft.Json.Linq;
 
 namespace Microsoft.Azure.SignalR;
 
+#nullable enable
+
 internal partial class MicrosoftEntraAccessKey : AccessKey
 {
     internal static readonly TimeSpan GetAccessKeyTimeout = TimeSpan.FromSeconds(100);
@@ -41,7 +43,7 @@ internal partial class MicrosoftEntraAccessKey : AccessKey
 
     private volatile bool _isAuthorized = false;
 
-    private Exception _lastException;
+    private Exception? _lastException;
 
     private DateTime _lastUpdatedTime = DateTime.MinValue;
 
@@ -56,7 +58,7 @@ internal partial class MicrosoftEntraAccessKey : AccessKey
             }
             _lastUpdatedTime = DateTime.UtcNow;
             _isAuthorized = value;
-            _initializedTcs.TrySetResult(null);
+            _initializedTcs.TrySetResult(string.Empty);
         }
     }
 
@@ -68,7 +70,7 @@ internal partial class MicrosoftEntraAccessKey : AccessKey
 
     private Task<object> InitializedTask => _initializedTcs.Task;
 
-    public MicrosoftEntraAccessKey(Uri endpoint, TokenCredential credential, Uri serverEndpoint = null) : base(endpoint)
+    public MicrosoftEntraAccessKey(Uri endpoint, TokenCredential credential, Uri? serverEndpoint = null) : base(endpoint)
     {
         var authorizeUri = (serverEndpoint ?? endpoint).Append("/api/v1/auth/accessKey");
         GetAccessKeyUrl = authorizeUri.AbsoluteUri;
@@ -77,7 +79,7 @@ internal partial class MicrosoftEntraAccessKey : AccessKey
 
     public virtual async Task<string> GetMicrosoftEntraTokenAsync(CancellationToken ctoken = default)
     {
-        Exception latest = null;
+        Exception? last = null;
         for (var i = 0; i < GetMicrosoftEntraTokenMaxRetryTimes; i++)
         {
             try
@@ -87,18 +89,17 @@ internal partial class MicrosoftEntraAccessKey : AccessKey
             }
             catch (Exception e)
             {
-                latest = e;
+                last = e;
             }
         }
-        throw latest;
+        throw last ?? new InvalidOperationException();
     }
 
-    public override async Task<string> GenerateAccessTokenAsync(
-        string audience,
-        IEnumerable<Claim> claims,
-        TimeSpan lifetime,
-        AccessTokenAlgorithm algorithm,
-        CancellationToken ctoken = default)
+    public override async Task<string> GenerateAccessTokenAsync(string audience,
+                                                                IEnumerable<Claim> claims,
+                                                                TimeSpan lifetime,
+                                                                AccessTokenAlgorithm algorithm,
+                                                                CancellationToken ctoken = default)
     {
         var task = await Task.WhenAny(InitializedTask, ctoken.AsTask());
 
@@ -106,7 +107,7 @@ internal partial class MicrosoftEntraAccessKey : AccessKey
         {
             await task;
             return IsAuthorized
-                ? await base.GenerateAccessTokenAsync(audience, claims, lifetime, algorithm)
+                ? await base.GenerateAccessTokenAsync(audience, claims, lifetime, algorithm, ctoken)
                 : throw new AzureSignalRAccessTokenNotAuthorizedException(TokenCredential.GetType().Name, _lastException);
         }
         else
@@ -165,37 +166,36 @@ internal partial class MicrosoftEntraAccessKey : AccessKey
         IsAuthorized = false;
     }
 
-    private async Task GetAccessKeyInternalAsync(string accessToken, CancellationToken ctoken = default)
-    {
-        var api = new RestApiEndpoint(GetAccessKeyUrl, accessToken);
-        var client = new RestClient(HttpClientFactory.Instance);
-        await client.SendAsync(
-            api,
-            HttpMethod.Get,
-            handleExpectedResponseAsync: HandleHttpResponseAsync,
-            cancellationToken: ctoken);
-    }
-
-    private async Task<bool> HandleHttpResponseAsync(HttpResponseMessage response)
+    internal virtual async Task<bool> HandleHttpResponseAsync(HttpResponseMessage response)
     {
         if (response.StatusCode != HttpStatusCode.OK)
         {
             return false;
         }
 
-        var json = await response.Content.ReadAsStringAsync();
-        var obj = JObject.Parse(json);
+        var content = await response.Content.ReadAsStringAsync();
+        var json = JObject.Parse(content);
 
-        if (!obj.TryGetValue("KeyId", out var keyId) || keyId.Type != JTokenType.String)
+        if (!json.TryGetValue("KeyId", out var keyId) || keyId.Type != JTokenType.String)
         {
             throw new AzureSignalRException("Missing required <KeyId> field.");
         }
-        if (!obj.TryGetValue("AccessKey", out var key) || key.Type != JTokenType.String)
+        if (!json.TryGetValue("AccessKey", out var key) || key.Type != JTokenType.String)
         {
             throw new AzureSignalRException("Missing required <AccessKey> field.");
         }
 
         UpdateAccessKey(keyId.ToString(), key.ToString());
         return true;
+    }
+
+    private async Task GetAccessKeyInternalAsync(string accessToken, CancellationToken ctoken = default)
+    {
+        var api = new RestApiEndpoint(GetAccessKeyUrl, accessToken);
+        var client = new RestClient();
+        await client.SendAsync(api,
+                               HttpMethod.Get,
+                               handleExpectedResponseAsync: HandleHttpResponseAsync,
+                               cancellationToken: ctoken);
     }
 }
