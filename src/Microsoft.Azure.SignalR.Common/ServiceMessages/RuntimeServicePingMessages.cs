@@ -10,27 +10,38 @@ namespace Microsoft.Azure.SignalR;
 internal static class RuntimeServicePingMessage
 {
     private const string EchoKey = "echo";
+
     private const string OfflineKey = "offline";
+
     private const string TargetKey = "target";
+
     private const string StatusKey = "status";
+
     private const string ShutdownKey = "shutdown";
+
     private const string ServersKey = "servers";
+
     private const string ClientCountKey = "clientcount";
+
     private const string ServerCountKey = "servercount";
+
     private const string CapacityKey = "capacity";
+
     private const string DiagnosticLogsMessagingTypeKey = "d-m";
 
     private const string MessagingLogEnableValue = "1";
 
     private const string StatusActiveValue = "1";
+
     private const string StatusInactiveValue = "0";
 
-    private const string ShutdownFinKeepAliveValue = "fin:2";
-    private const string ShutdownFinMigratableValue = "fin:1";
     private const string ShutdownFinValue = "fin:0";
 
+    private const string ShutdownFinMigrateClientsValue = "fin:1";
+
+    private const string ShutdownFinWaitForClientsValue = "fin:2";
+
     private const string ShutdownFinAckValue = "finack";
-    private const char ServerListSeparator = ';';
 
     private static readonly ServicePingMessage StatusActive =
         new ServicePingMessage { Messages = new[] { StatusKey, StatusActiveValue } };
@@ -41,11 +52,11 @@ internal static class RuntimeServicePingMessage
     private static readonly ServicePingMessage ShutdownFin =
         new ServicePingMessage { Messages = new[] { ShutdownKey, ShutdownFinValue } };
 
-    private static readonly ServicePingMessage ShutdownFinMigratable =
-        new ServicePingMessage { Messages = new[] { ShutdownKey, ShutdownFinMigratableValue } };
+    private static readonly ServicePingMessage ShutdownFinMigrateClients =
+        new ServicePingMessage { Messages = new[] { ShutdownKey, ShutdownFinMigrateClientsValue } };
 
-    private static readonly ServicePingMessage ShutdownFinKeepAlive =
-        new ServicePingMessage { Messages = new[] { ShutdownKey, ShutdownFinKeepAliveValue } };
+    private static readonly ServicePingMessage ShutdownFinWaitForClients =
+        new ServicePingMessage { Messages = new[] { ShutdownKey, ShutdownFinWaitForClientsValue } };
 
     private static readonly ServicePingMessage ShutdownFinAck =
         new ServicePingMessage { Messages = new[] { ShutdownKey, ShutdownFinAckValue } };
@@ -83,7 +94,6 @@ internal static class RuntimeServicePingMessage
         isActive
         ? new ServicePingMessage { Messages = new[] { StatusKey, StatusActiveValue, ClientCountKey, clientCount.ToString() } }
         : new ServicePingMessage { Messages = new[] { StatusKey, StatusInactiveValue, ClientCountKey, clientCount.ToString() } };
-
 
     public static bool TryGetStatus(this ServicePingMessage ping, out bool isActive)
     {
@@ -150,8 +160,8 @@ internal static class RuntimeServicePingMessage
     {
         return mode switch
         {
-            GracefulShutdownMode.WaitForClientsClose => ShutdownFinKeepAlive,
-            GracefulShutdownMode.MigrateClients => ShutdownFinMigratable,
+            GracefulShutdownMode.WaitForClientsClose => ShutdownFinWaitForClients,
+            GracefulShutdownMode.MigrateClients => ShutdownFinMigrateClients,
             _ => ShutdownFin,
         };
     }
@@ -165,8 +175,8 @@ internal static class RuntimeServicePingMessage
         serviceMessage is ServicePingMessage ping && TryGetValue(ping, ShutdownKey, out var value) && (value switch
         {
             ShutdownFinValue => true,
-            ShutdownFinMigratableValue => true,
-            ShutdownFinKeepAliveValue => true,
+            ShutdownFinMigrateClientsValue => true,
+            ShutdownFinWaitForClientsValue => true,
             _ => false,
         });
 
@@ -185,7 +195,7 @@ internal static class RuntimeServicePingMessage
             return false;
         }
 
-        for (int i = 0; i < pingMessage.Messages.Length - 1; i += 2)
+        for (var i = 0; i < pingMessage.Messages.Length - 1; i += 2)
         {
             if (pingMessage.Messages[i] == key)
             {

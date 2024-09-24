@@ -26,6 +26,7 @@ internal abstract class ServiceConnectionContainerBase : IServiceConnectionConta
     private static readonly int MaxReconnectBackOffInternalInMilliseconds = 1000;
 
     private static readonly TimeSpan MessageWriteRetryDelay = TimeSpan.FromMilliseconds(200);
+
     private static readonly int MessageWriteMaxRetry = 3;
 
     // Give (interval * 3 + 1) delay when check value expire.
@@ -119,6 +120,7 @@ internal abstract class ServiceConnectionContainerBase : IServiceConnectionConta
         Logger = logger ?? throw new ArgumentNullException(nameof(logger));
         ServiceConnectionFactory = serviceConnectionFactory;
         Endpoint = endpoint;
+
         // use globally unique AckHanlder if not specified
         // It is possible that the multiple MapHub calls the same hub, so that ack messages could be received by another instance of ServiceConnectionContainer
         // Use the ack handler singleton to allow ack message to be acked by another container instance
@@ -395,19 +397,15 @@ internal abstract class ServiceConnectionContainerBase : IServiceConnectionConta
             : ServiceConnectionStatus.Disconnected;
     }
 
-    protected async Task WriteFinAsync(IServiceConnection c, GracefulShutdownMode mode)
-    {
-        var message = RuntimeServicePingMessage.GetFinPingMessage(mode);
-        await c.WriteAsync(message);
-    }
-
     protected async Task RemoveConnectionAsync(IServiceConnection c, GracefulShutdownMode mode)
     {
         var retry = 0;
         while (retry < MaxRetryRemoveSeverConnection)
         {
             using var source = new CancellationTokenSource();
-            _ = WriteFinAsync(c, mode);
+
+            var message = RuntimeServicePingMessage.GetFinPingMessage(mode);
+            _ = c.WriteAsync(message);
 
             var task = await Task.WhenAny(c.ConnectionOfflineTask, Task.Delay(Constants.Periods.RemoveFromServiceTimeout, source.Token));
 
