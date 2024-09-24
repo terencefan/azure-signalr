@@ -26,6 +26,7 @@ namespace Microsoft.Azure.SignalR
         private static readonly int MaxReconnectBackOffInternalInMilliseconds = 1000;
 
         private static readonly TimeSpan MessageWriteRetryDelay = TimeSpan.FromMilliseconds(200);
+
         private static readonly int MessageWriteMaxRetry = 3;
 
         // Give (interval * 3 + 1) delay when check value expire.
@@ -119,6 +120,7 @@ namespace Microsoft.Azure.SignalR
             Logger = logger ?? throw new ArgumentNullException(nameof(logger));
             ServiceConnectionFactory = serviceConnectionFactory;
             Endpoint = endpoint;
+
             // use globally unique AckHanlder if not specified
             // It is possible that the multiple MapHub calls the same hub, so that ack messages could be received by another instance of ServiceConnectionContainer
             // Use the ack handler singleton to allow ack message to be acked by another container instance
@@ -311,6 +313,12 @@ namespace Microsoft.Azure.SignalR
             }
         }
 
+        protected static async Task WriteFinAsync(IServiceConnection c, GracefulShutdownMode mode)
+        {
+            var message = RuntimeServicePingMessage.GetFinPingMessage(mode);
+            await c.WriteAsync(message);
+        }
+
         /// <summary>
         /// Start and manage the whole connection lifetime
         /// </summary>
@@ -393,12 +401,6 @@ namespace Microsoft.Azure.SignalR
             return ServiceConnections.Any(s => s.Status == ServiceConnectionStatus.Connected)
                 ? ServiceConnectionStatus.Connected
                 : ServiceConnectionStatus.Disconnected;
-        }
-
-        protected async Task WriteFinAsync(IServiceConnection c, GracefulShutdownMode mode)
-        {
-            var message = RuntimeServicePingMessage.GetFinPingMessage(mode);
-            await c.WriteAsync(message);
         }
 
         protected async Task RemoveConnectionAsync(IServiceConnection c, GracefulShutdownMode mode)
