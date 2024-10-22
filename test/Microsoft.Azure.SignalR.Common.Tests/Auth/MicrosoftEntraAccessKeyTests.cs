@@ -1,4 +1,7 @@
 ﻿using System;
+using System.Net;
+using System.Net.Http;
+using System.Net.Http.Json;
 using System.Reflection;
 using System.Security.Claims;
 using System.Threading;
@@ -11,11 +14,13 @@ using Xunit;
 namespace Microsoft.Azure.SignalR.Common.Tests.Auth;
 
 [Collection("Auth")]
-public class AccessKeyForMicrosoftEntraTests
+public class MicrosoftEntraAccessKeyTests
 {
     private const string DefaultSigningKey = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
 
-    private static Uri DefaultEndpoint = new Uri("http://localhost");
+    private const string DefaultToken = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+
+    private static readonly Uri DefaultEndpoint = new Uri("http://localhost");
 
     [Theory]
     [InlineData("https://a.bc", "https://a.bc/api/v1/auth/accessKey")]
@@ -80,8 +85,6 @@ public class AccessKeyForMicrosoftEntraTests
         var initializedTcsField = typeof(MicrosoftEntraAccessKey).GetField("_initializedTcs", BindingFlags.NonPublic | BindingFlags.Instance);
         var initializedTcs = (TaskCompletionSource<object>)initializedTcsField.GetValue(key);
 
-        var lastExceptionFields = typeof(MicrosoftEntraAccessKey).GetField("_lastException", BindingFlags.NonPublic | BindingFlags.Instance);
-
         await key.UpdateAccessKeyAsync().OrTimeout(TimeSpan.FromSeconds(30));
         var actualLastUpdatedTime = Assert.IsType<DateTime>(lastUpdatedTimeField.GetValue(key));
 
@@ -89,14 +92,14 @@ public class AccessKeyForMicrosoftEntraTests
         {
             Assert.Equal(isAuthorized, Assert.IsType<bool>(isAuthorizedField.GetValue(key)));
             Assert.Equal(lastUpdatedTime, actualLastUpdatedTime);
-            Assert.Null(lastExceptionFields.GetValue(key));
+            Assert.Null(key.LastException);
             Assert.False(initializedTcs.Task.IsCompleted);
         }
         else
         {
             Assert.False(Assert.IsType<bool>(isAuthorizedField.GetValue(key)));
             Assert.True(lastUpdatedTime < actualLastUpdatedTime);
-            Assert.NotNull(Assert.IsType<InvalidOperationException>(lastExceptionFields.GetValue(key)));
+            Assert.NotNull(Assert.IsType<InvalidOperationException>(key.LastException));
             Assert.True(initializedTcs.Task.IsCompleted);
         }
     }
@@ -145,12 +148,57 @@ public class AccessKeyForMicrosoftEntraTests
             async () => await key.GenerateAccessTokenAsync(audience, claims, lifetime, algorithm)
         );
         Assert.IsType<InvalidOperationException>(exception.InnerException);
+        Assert.Same(exception.InnerException, key.LastException);
 
-        var lastExceptionFields = typeof(MicrosoftEntraAccessKey).GetField("_lastException", BindingFlags.NonPublic | BindingFlags.Instance);
-
-        Assert.NotNull(lastExceptionFields.GetValue(key));
         var (kid, accessKey) = ("foo", DefaultSigningKey);
         key.UpdateAccessKey(kid, accessKey);
-        Assert.Null(lastExceptionFields.GetValue(key));
+        Assert.Null(key.LastException);
+    }
+
+    [Theory]
+    [InlineData(DefaultSigningKey)]
+    [InlineData("fooooooooooooooooooooooooooooooooobar")]
+    public async Task TestUpdateAccessKeySendRequest(string signingKey)
+    {
+        var token = new AccessToken(DefaultToken, DateTimeOffset.UtcNow.Add(TimeSpan.FromHours(1)));
+
+        var mockCredential = new Mock<TokenCredential>();
+        mockCredential.Setup(credential => credential.GetTokenAsync(
+            It.IsAny<TokenRequestContext>(),
+            It.IsAny<CancellationToken>()))
+            .Returns(ValueTask.FromResult(token));
+
+        var httpClientFactory = new TestHttpClientFactory(new HttpResponseMessage(HttpStatusCode.OK)
+        {
+            Content = JsonContent.Create(new AccessKeyResponse()
+            {
+                KeyId = "foo",
+                AccessKey = signingKey,
+            })
+        });
+        var key = new MicrosoftEntraAccessKey(DefaultEndpoint, mockCredential.Object, httpClientFactory: httpClientFactory);
+
+        await key.UpdateAccessKeyAsync();
+
+        Assert.True(key.IsAuthorized);
+        Assert.Equal("foo", key.Id);
+        Assert.Equal(signingKey, key.Value);
+    }
+
+    private sealed class TestHttpClientFactory(HttpResponseMessage message) : IHttpClientFactory
+    {
+        public HttpClient CreateClient(string name)
+        {
+            return new TestHttpClient(message);
+        }
+    }
+
+    private sealed class TestHttpClient(HttpResponseMessage message) : HttpClient
+    {
+        public override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+        {
+            Assert.Equal(DefaultToken, request.Headers.Authorization.ToString().Substring("Bearer ".Length));
+            return Task.FromResult(message);
+        }
     }
 }

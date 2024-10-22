@@ -5,6 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.Net;
 using System.Net.Http;
+using System.Net.Http.Headers;
 using System.Security.Claims;
 using System.Threading;
 using System.Threading.Tasks;
@@ -12,12 +13,14 @@ using System.Threading.Tasks;
 using Azure.Core;
 
 using Microsoft.Azure.SignalR.Common;
-
+using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 
 namespace Microsoft.Azure.SignalR;
 
-internal partial class MicrosoftEntraAccessKey : AccessKey
+#nullable enable
+
+internal class MicrosoftEntraAccessKey : AccessKey
 {
     internal static readonly TimeSpan GetAccessKeyTimeout = TimeSpan.FromSeconds(100);
 
@@ -37,22 +40,23 @@ internal partial class MicrosoftEntraAccessKey : AccessKey
 
     private static readonly TimeSpan GetAccessKeyRetryInterval = TimeSpan.FromSeconds(3);
 
-    private readonly TaskCompletionSource<object> _initializedTcs = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
+    private readonly TaskCompletionSource<object?> _initializedTcs = new TaskCompletionSource<object?>(TaskCreationOptions.RunContinuationsAsynchronously);
+
+    private readonly IHttpClientFactory _httpClientFactory;
 
     private volatile bool _isAuthorized = false;
-
-    private Exception _lastException;
 
     private DateTime _lastUpdatedTime = DateTime.MinValue;
 
     public bool IsAuthorized
     {
         get => _isAuthorized;
+
         private set
         {
             if (value)
             {
-                _lastException = null;
+                LastException = null;
             }
             _lastUpdatedTime = DateTime.UtcNow;
             _isAuthorized = value;
@@ -62,22 +66,28 @@ internal partial class MicrosoftEntraAccessKey : AccessKey
 
     public TokenCredential TokenCredential { get; }
 
+    internal Exception? LastException { get; private set; }
+
     internal string GetAccessKeyUrl { get; }
 
     internal bool HasExpired => DateTime.UtcNow - _lastUpdatedTime > TimeSpan.FromMinutes(GetAccessKeyIntervalInMinute * 2);
 
-    private Task<object> InitializedTask => _initializedTcs.Task;
+    private Task<object?> InitializedTask => _initializedTcs.Task;
 
-    public MicrosoftEntraAccessKey(Uri endpoint, TokenCredential credential, Uri serverEndpoint = null) : base(endpoint)
+    public MicrosoftEntraAccessKey(Uri endpoint,
+                                   TokenCredential credential,
+                                   Uri? serverEndpoint = null,
+                                   IHttpClientFactory? httpClientFactory = null) : base(endpoint)
     {
         var authorizeUri = (serverEndpoint ?? endpoint).Append("/api/v1/auth/accessKey");
         GetAccessKeyUrl = authorizeUri.AbsoluteUri;
         TokenCredential = credential;
+        _httpClientFactory = httpClientFactory ?? HttpClientFactory.Instance;
     }
 
     public virtual async Task<string> GetMicrosoftEntraTokenAsync(CancellationToken ctoken = default)
     {
-        Exception latest = null;
+        Exception? latest = null;
         for (var i = 0; i < GetMicrosoftEntraTokenMaxRetryTimes; i++)
         {
             try
@@ -90,7 +100,7 @@ internal partial class MicrosoftEntraAccessKey : AccessKey
                 latest = e;
             }
         }
-        throw latest;
+        throw latest ?? new InvalidOperationException();
     }
 
     public override async Task<string> GenerateAccessTokenAsync(
@@ -107,7 +117,7 @@ internal partial class MicrosoftEntraAccessKey : AccessKey
             await task;
             return IsAuthorized
                 ? await base.GenerateAccessTokenAsync(audience, claims, lifetime, algorithm, ctoken)
-                : throw new AzureSignalRAccessTokenNotAuthorizedException(TokenCredential.GetType().Name, _lastException);
+                : throw new AzureSignalRAccessTokenNotAuthorizedException(TokenCredential.GetType().Name, LastException);
         }
         else
         {
@@ -139,18 +149,17 @@ internal partial class MicrosoftEntraAccessKey : AccessKey
             var linkedSource = CancellationTokenSource.CreateLinkedTokenSource(source.Token, ctoken);
             try
             {
-                var token = await GetMicrosoftEntraTokenAsync(linkedSource.Token);
-                await GetAccessKeyInternalAsync(token, linkedSource.Token);
+                await UpdateAccessKeyInternalAsync(linkedSource.Token);
                 return;
             }
             catch (OperationCanceledException e)
             {
-                _lastException = e;
+                LastException = e;
                 break;
             }
             catch (Exception e)
             {
-                _lastException = e;
+                LastException = e;
                 try
                 {
                     await Task.Delay(GetAccessKeyRetryInterval, ctoken);
@@ -165,15 +174,49 @@ internal partial class MicrosoftEntraAccessKey : AccessKey
         IsAuthorized = false;
     }
 
-    private async Task GetAccessKeyInternalAsync(string accessToken, CancellationToken ctoken = default)
+    private static async Task ThrowExceptionOnResponseFailureAsync(HttpResponseMessage response)
     {
-        var api = new RestApiEndpoint(GetAccessKeyUrl, accessToken);
-        var client = new RestClient(HttpClientFactory.Instance);
-        await client.SendAsync(
-            api,
-            HttpMethod.Get,
-            handleExpectedResponseAsync: HandleHttpResponseAsync,
-            cancellationToken: ctoken);
+        if (response.IsSuccessStatusCode)
+        {
+            return;
+        }
+
+        var detail = await response.Content.ReadAsStringAsync();
+
+#if NET5_0_OR_GREATER
+            var innerException = new HttpRequestException(
+                $"Response status code does not indicate success: {(int)response.StatusCode} ({response.ReasonPhrase})",
+                null,
+                response.StatusCode);
+#else
+        var innerException = new HttpRequestException(
+            $"Response status code does not indicate success: {(int)response.StatusCode} ({response.ReasonPhrase})");
+#endif
+
+        var requestUri = response.RequestMessage?.RequestUri?.ToString();
+        throw response.StatusCode switch
+        {
+            HttpStatusCode.BadRequest => new AzureSignalRInvalidArgumentException(requestUri, innerException, detail),
+            HttpStatusCode.Unauthorized => new AzureSignalRUnauthorizedException(requestUri, innerException),
+            HttpStatusCode.NotFound => new AzureSignalRInaccessibleEndpointException(requestUri, innerException),
+            _ => new AzureSignalRRuntimeException(requestUri, innerException),
+        };
+    }
+
+    private async Task UpdateAccessKeyInternalAsync(CancellationToken ctoken)
+    {
+        var accessToken = await GetMicrosoftEntraTokenAsync(ctoken);
+
+        var request = new HttpRequestMessage(HttpMethod.Get, new Uri(GetAccessKeyUrl));
+        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
+
+        var httpClient = _httpClientFactory.CreateClient(Constants.HttpClientNames.UserDefault);
+
+        var response = await httpClient.SendAsync(request, ctoken);
+
+        await HandleHttpResponseAsync(response);
+
+        await ThrowExceptionOnResponseFailureAsync(response);
     }
 
     private async Task<bool> HandleHttpResponseAsync(HttpResponseMessage response)
@@ -183,19 +226,19 @@ internal partial class MicrosoftEntraAccessKey : AccessKey
             return false;
         }
 
-        var json = await response.Content.ReadAsStringAsync();
-        var obj = JObject.Parse(json);
+        var content = await response.Content.ReadAsStringAsync();
+        var obj = JsonConvert.DeserializeObject<AccessKeyResponse>(content) ?? throw new AzureSignalRException("Access key response is not expected.");
 
-        if (!obj.TryGetValue("KeyId", out var keyId) || keyId.Type != JTokenType.String)
+        if (string.IsNullOrEmpty(obj.KeyId))
         {
             throw new AzureSignalRException("Missing required <KeyId> field.");
         }
-        if (!obj.TryGetValue("AccessKey", out var key) || key.Type != JTokenType.String)
+        if (string.IsNullOrEmpty(obj.AccessKey))
         {
             throw new AzureSignalRException("Missing required <AccessKey> field.");
         }
 
-        UpdateAccessKey(keyId.ToString(), key.ToString());
+        UpdateAccessKey(obj.KeyId, obj.AccessKey);
         return true;
     }
 }
