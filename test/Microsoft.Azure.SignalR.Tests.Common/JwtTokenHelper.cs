@@ -15,7 +15,10 @@ internal static class JwtTokenHelper
 
     private const string TestEndpoint = "http://localhost:443";
 
-    public static string GenerateExpectedAccessToken(JwtSecurityToken token, string audience, AccessKey accessKey, IEnumerable<Claim> customClaims = null)
+    public static string GenerateExpectedAccessToken(JwtSecurityToken token,
+                                                     string audience,
+                                                     AccessKey accessKey,
+                                                     IEnumerable<Claim> customClaims = null)
     {
         var requestId = token.Claims.FirstOrDefault(claim => claim.Type == Constants.ClaimType.Id)?.Value;
 
@@ -32,7 +35,7 @@ internal static class JwtTokenHelper
             claims.AddRange(customClaims.ToList());
         }
 
-        var tokenString = GenerateJwtBearer(
+        var tokenString = GenerateJwtToken(
             audience, claims,
             token.ValidTo,
             token.ValidFrom,
@@ -48,36 +51,29 @@ internal static class JwtTokenHelper
         return GenerateExpectedAccessToken(token, audience, new AccessKey(new Uri(TestEndpoint), key), customClaims: customClaims);
     }
 
-    public static string GenerateJwtBearer(
-        string audience,
-        IEnumerable<Claim> subject,
-        DateTime expires,
-        DateTime notBefore,
-        DateTime issueAt,
-        IAccessKey signingKey
-    )
+    public static string GenerateJwtToken(string audience,
+                                          IEnumerable<Claim> claims,
+                                          DateTime expires,
+                                          DateTime notBefore,
+                                          DateTime issueAt,
+                                          IAccessKey signingKey)
     {
-        return AuthUtility.GenerateJwtBearer(
-            signingKey.KeyBytes,
-            signingKey.Kid,
-            issuer: null,
-            audience: audience,
-            claims: subject,
-            notBefore: notBefore,
-            expires: expires,
-            issuedAt: issueAt
-        );
+        return AuthUtility.GenerateJwtToken(signingKey.KeyBytes,
+                                            signingKey.Kid,
+                                            audience: audience,
+                                            claims: claims,
+                                            notBefore: notBefore,
+                                            expires: expires,
+                                            issuedAt: issueAt);
     }
 
-    public static string GenerateJwtBearer(
-        string audience,
-        IEnumerable<Claim> subject,
-        DateTime expires,
-        DateTime notBefore,
-        DateTime issueAt,
-        string signingKey
-    )
+    public static string GenerateJwtToken(string audience,
+                                          IEnumerable<Claim> claims,
+                                          DateTime expires,
+                                          DateTime notBefore,
+                                          DateTime issueAt,
+                                          string signingKey)
     {
-        return GenerateJwtBearer(audience, subject, expires, notBefore, issueAt, new AccessKey(new Uri(TestEndpoint), signingKey));
+        return GenerateJwtToken(audience, claims, expires, notBefore, issueAt, new AccessKey(new Uri(TestEndpoint), signingKey));
     }
 }

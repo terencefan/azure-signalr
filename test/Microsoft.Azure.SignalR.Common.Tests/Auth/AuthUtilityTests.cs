@@ -24,7 +24,7 @@ public class AuthUtilityTests
     private static readonly TimeSpan DefaultLifetime = TimeSpan.FromHours(1);
 
     [Fact]
-    public void TestAccessTokenTooLongThrowsException()
+    public void TestGenerateAccessTokenThrowsTooLongException()
     {
         var claims = GenerateClaims(100);
         var accessKey = new AccessKey(new Uri("http://localhost:443"), SigningKey);
@@ -49,7 +49,7 @@ public class AuthUtilityTests
     public void TestTryParseIssuer(string? issuer)
     {
         var accessKey = new AccessKey(new Uri("http://localhost:443"), SigningKey);
-        var token = AuthUtility.GenerateJwtBearer(accessKey.KeyBytes, issuer: issuer);
+        var token = AuthUtility.GenerateJwtToken(accessKey.KeyBytes, issuer: issuer);
 
         if (string.IsNullOrEmpty(issuer))
         {
@@ -72,6 +72,15 @@ public class AuthUtilityTests
     {
         Assert.False(TokenUtilities.TryParseIssuer(jwtToken, out var issuer));
         Assert.Null(issuer);
+    }
+
+    [Fact]
+    public void TestAccessTokenHasIssuerClaim()
+    {
+        var accessKey = new AccessKey(new Uri("http://localhost:443"), SigningKey);
+        var accessToken = AuthUtility.GenerateAccessToken(accessKey.KeyBytes, accessKey.Kid, Audience, [], DefaultLifetime, AccessTokenAlgorithm.HS256);
+        Assert.True(TokenUtilities.TryParseIssuer(accessToken, out var issuer));
+        Assert.Equal(Constants.AzureSignalRIssuer, issuer);
     }
 
     private static Claim[] GenerateClaims(int count)
