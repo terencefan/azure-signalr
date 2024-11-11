@@ -42,6 +42,8 @@ internal class MicrosoftEntraAccessKey : IAccessKey
 
     private readonly IHttpClientFactory _httpClientFactory;
 
+    private readonly TimerAwaitable _timer = new TimerAwaitable(TimeSpan.Zero, TimeSpan.FromMinutes(1));
+
     private volatile bool _isAuthorized = false;
 
     private DateTime _lastUpdatedTime = DateTime.MinValue;
@@ -116,12 +118,11 @@ internal class MicrosoftEntraAccessKey : IAccessKey
         throw latest ?? new InvalidOperationException();
     }
 
-    public async Task<string> GenerateAccessTokenAsync(
-        string audience,
-        IEnumerable<Claim> claims,
-        TimeSpan lifetime,
-        AccessTokenAlgorithm algorithm,
-        CancellationToken ctoken = default)
+    public async Task<string> GenerateAccessTokenAsync(string audience,
+                                                       IEnumerable<Claim> claims,
+                                                       TimeSpan lifetime,
+                                                       AccessTokenAlgorithm algorithm,
+                                                       CancellationToken ctoken = default)
     {
         var task = await Task.WhenAny(InitializedTask, ctoken.AsTask());
 
